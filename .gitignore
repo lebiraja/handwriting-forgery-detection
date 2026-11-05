@@ -1,0 +1,33 @@
+# secrets
+.env
+*.env
+
+# large / third-party data and weights (re-fetchable, see datasets/DATASETS.md and models/MODELS.md)
+*.zip
+*.tar.gz
+*.tgz
+datasets/*/
+!datasets/manifests/
+datasets/cache/
+models/weights/
+papers/**/*.pdf
+code/*/
+
+# checkpoints and caches
+train/runs/**/*.pt
+**/__pycache__/
+.pytest_cache/
+
+# LaTeX build files
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.bbl
+paper/*.bcf
+paper/*.blg
+paper/*.fls
+paper/*.fdb_latexmk
+paper/*.synctex.gz
+paper/*.run.xml
+paper/*.toc
+paper/main.pdf

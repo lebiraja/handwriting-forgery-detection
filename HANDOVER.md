@@ -1,0 +1,49 @@
+# HANDOVER
+
+## 2026-11-06 02:05 IST: MORNING CHECKLIST (system was shut down after this entry)
+Everything is committed in git (branch master, no remote). Nothing is running. In order:
+1. **Check the machine:** plugged in, `nvidia-smi` works, `docker images | grep handwriting-train` shows `handwriting-train:0.1`.
+2. **Resume the ablations** (6 runs x about 20 min = about 2 h):
+   `cd /home/lebi/Projects/lincy/final-year/train && nohup ./queue_resume.sh > runs/queue.log 2>&1 &`
+   Watch: `tail -f runs/abl_no_distill.log` (each run has its own log); done when `runs/queue.done` exists.
+3. **Final evaluation (once, after the queue; GPU free):** for each seed s in 0 1 2:
+   `docker compose run --rm train python -m src.eval --run /app/runs/main_s$s --out /app/runs/main_s$s/eval_val.json` (re-run val: the seed-0 file lacks writer counts), then `... --out /app/runs/main_s$s/eval_test.json --test`.
+   Baselines on test: `docker compose run --rm train python -m src.baselines --split test --names b0 b2 b3`.
+   Heatmaps: `docker compose run --rm train python -m src.explain --run /app/runs/main_s0 --out /app/runs/main_s0/explain --split val` (untested script; fix if it fails).
+   Do not tune anything after seeing test numbers.
+4. **Plots, tables, abstract:** `/tmp/rv/bin/python train/src/report.py --runs train/runs --out paper` (venv with matplotlib, scipy, scikit-learn; recreate it if /tmp was cleared, see `docs/docker.md`). The abstract is generated (<= 120 words) only when test evals and `baselines/b2_test.json` exist.
+5. **Write** results, discussion, conclusion from the numbers (fill `docs/paper-claims-map.md`), then trim to **6 pages including references**; build with `cd paper && latexmk -pdf main.tex`.
+6. **Ask Lincy / guide** the items in BLOCKERS.md (division, "Dr.", co-author).
+Known pitfalls: see the rules list below and FIXES.md. The sudo password was given verbally for the shutdown only and is stored nowhere.
+
+## 2026-11-06 00:35 IST
+Final-evaluation checklist (after the queue): (1) `src.baselines --split test` for b0/b2/b3 (b2 is needed by the abstract); (2) `src.eval --run <each seed> --test` once per seed, outputs `eval_test.json` and `eval_test_scores.npz`; also re-run `eval_val.json` for each seed (the old seed-0 file lacks writer counts); (3) `src.explain` on the best seed; (4) `report.py --split test`; (5) write results, discussion, conclusion from the numbers; (6) trim to 6 pages including references. The abstract is auto-generated (<= 120 words) and fails loudly if too long.
+
+## 2026-11-06 00:20 IST
+Paper now follows the sem5 deeplearning paper's conventions (see `docs/paper-plan.md`). **`paper/tables/tab_main.tex` currently holds VALIDATION numbers generated for testing; it is not included in the paper. Regenerate with `report.py --split test` after the final evaluation.** 6-page limit includes references; the first full draft will be over and must be trimmed. Rules unchanged: no hand-typed numbers; every number in `docs/paper-claims-map.md`.
+
+## 2026-11-06 00:15 IST
+**Added since the previous entry:** architecture figure (TikZ, `paper/figures/architecture.tex`), `train/src/report.py` (all figures and tables from `runs/`), `train/src/explain.py` (heatmaps + deletion test, **written but never run**), draft paper compiles (4 pages).
+**Open:** `explain.py` needs a GPU slot after the queue (run it with `flock /tmp/handwriting_gpu.lock`); `report.py` still needs a 3-way verdict table and a main-results table; DET, reliability and Firemaker figures appear only after `src.eval --test`. `fig_multiref_val` is preliminary (validation, old JSON without writer counts).
+
+## 2026-11-05 23:58 IST
+**State:** English model pipeline is built; `main_s0` is trained; the queue (`train/queue.sh`) is running seed 1, then seed 2, then seven 40-epoch ablations, one GPU job at a time. Paper sections introduction, related work, method and setup are drafted; results, discussion and abstract wait for the final evaluation.
+
+**Next steps, in order**
+1. Let the queue finish (about 4 hours from 23:45). Check `train/runs/queue.log` and `tail -f train/runs/<run>.log`.
+2. Run `src.eval` with `--test` for every seed exactly once; do not tune anything afterwards.
+3. Write `src/report.py` (tables and figures from JSON), then paper sections results, discussion, abstract.
+4. Build with `latexmk -pdf main.tex` in `paper/`; run ARS citation check and disclosure.
+
+**Rules that bite**
+- Firemaker is test-only and never used for tuning. Test sets are evaluated once, at the end.
+- Firemaker p3 is self-disguise, not impersonation. Kaggle "generated" pages are fonts. Never call them AI forgeries.
+- `--set` may be repeated; resume refuses a different seed. Use a new run name for a new run.
+- Only one GPU job at a time (`run_train.sh` uses a flock); everything heavy runs niced.
+- Never `pkill -f` something that appears in your own command; it kills the shell.
+- zsh does not split `$VAR`; use `$=VAR`.
+- On pandas rows use `r["view"]`, not `r.view`.
+- Tokens are in `.env` (mode 600, git-ignored). Never print or commit them; they were also pasted into the chat, consider rotating them after the project.
+- Numbers in the paper only from `runs/*/eval*.json`.
+- IAM validation EER is optimistic (shared scanner/pen); lead with Firemaker and CVL in the discussion.
+- Indic and CEDAR downloads are paused by decision; resume only after the English paper.
