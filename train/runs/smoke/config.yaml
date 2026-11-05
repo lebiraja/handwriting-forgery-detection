@@ -1,0 +1,30 @@
+cvl_frac: 0.4
+datasets:
+- iam
+- cvl
+distill:
+  enabled: true
+  teacher: /models/dinov2-small
+  w_feat: 0.5
+  w_rel: 0.5
+ema_decay: 0.999
+embed_dim: 256
+epochs: 3
+eval_every: 1
+k: 16
+k_eval: 64
+lr: 0.0003
+manifest: /data/cache/manifests/master.csv
+mining_every: 2
+num_workers: 8
+out_dir: /app/runs/smoke
+p_mine: 0.5
+patience: 30
+pool: attention
+seed: 0
+size: 128
+temperature: 0.1
+time_limit_min: 60
+warmup_epochs: 1
+weight_decay: 0.0001
+writers_per_batch: 12
