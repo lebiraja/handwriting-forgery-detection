@@ -1,0 +1,52 @@
+\documentclass[conference]{IEEEtran}
+
+\usepackage{amsmath}
+\usepackage{newtxtext,newtxmath}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,calc,fit,backgrounds}
+\usepackage{booktabs}
+\usepackage{cleveref}
+\usepackage{microtype}
+\usepackage[backend=biber,style=ieee,maxbibnames=3,minbibnames=1]{biblatex}
+\addbibresource{refs.bib}
+
+\begin{document}
+\title{Page-Level Handwriting Forgery Detection:\\
+Multi-Reference Verification with Calibrated Verdicts}
+
+\author{
+\IEEEauthorblockN{Lincy Jenita J}
+\IEEEauthorblockA{\textit{Division of Artificial Intelligence and Machine Learning}\\
+\textit{Karunya Institute of Technology and Sciences}\\
+India}
+\and
+\IEEEauthorblockN{S. D. Lalitha}
+\IEEEauthorblockA{\textit{Division of Artificial Intelligence and Machine Learning}\\
+\textit{Karunya Institute of Technology and Sciences}\\
+India}
+}
+
+\maketitle
+
+\begin{abstract}
+\IfFileExists{sections/abstract.tex}{\input{sections/abstract}}{}
+\end{abstract}
+
+\begin{IEEEkeywords}
+handwriting verification, forgery detection, writer verification, metric learning, knowledge distillation, calibration
+\end{IEEEkeywords}
+
+\input{sections/introduction}
+\input{sections/related}
+\input{sections/data}
+\input{sections/method}
+\input{sections/experiments}
+\IfFileExists{sections/results.tex}{\input{sections/results}}{}
+\IfFileExists{sections/discussion.tex}{\input{sections/discussion}}{}
+\IfFileExists{sections/limitations.tex}{\input{sections/limitations}}{}
+\IfFileExists{sections/conclusion.tex}{\input{sections/conclusion}}{}
+
+\printbibliography
+
+\end{document}

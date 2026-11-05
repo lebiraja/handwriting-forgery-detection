@@ -1,0 +1,32 @@
+\section{Introduction}
+Handwritten examination scripts, wills, contracts and notes are routinely disputed.
+A typical case is an answer sheet whose ownership is questioned because another person is suspected of copying the answers in an imitation of the owner's handwriting.
+The owner can then offer earlier genuine scripts as references, and an examiner must decide whether the questioned script is consistent with them.
+This is a \emph{page-level, multi-reference} verification problem: the evidence is a complete script, not a single word, sentence or signature, and several known pages are available.
+
+Most deep-learning work on handwriting is organised differently.
+Writer identification and retrieval systems assign a page to one of many known writers or rank a collection by similarity~\cite{xing2016deepwriter,he2020fragnet,christlein2017unsupervised,raven2024selfsupervised,peer2023towards}.
+Verification work compares a pair of samples, usually words, text patches or signatures~\cite{adak2019intravariable,shaikh2020attention,dey2017signet,chauhan2024selfsupervised}.
+Little of it combines a whole questioned page with several reference pages, reports a calibrated degree of support, or allows the system to answer ``inconclusive''.
+
+A further difficulty is the threat model.
+Public datasets contain genuine pages by many writers, but almost none contain a person deliberately imitating another.
+At the same time, generative models can now imitate a given writing style~\cite{nikolaidou2023wordstylist,nikolaidou2024diffusionpen,vanherle2024vatr,mayr2024zeroshot}.
+
+This paper builds and evaluates a page-level verifier under these conditions.
+Our contributions are:
+\begin{itemize}
+\item A page-level verifier that embeds a full script as an attention-pooled bag of ink patches and compares a questioned page with one or several reference pages, with four fusion rules evaluated.
+\item Content-matched hard negatives: for the CVL data, every batch contains different writers copying the same two texts, so the network must separate writers by style instead of text.
+\item A calibrated three-way verdict (consistent, inconclusive, likely forged) with thresholds fixed on validation data, and a likelihood-ratio style score.
+\item A compact ResNet-18 student trained from scratch with distillation from a frozen self-supervised ViT teacher; the teacher is used only during training.
+\item An evaluation protocol with writer-disjoint splits, a cross-dataset test on a corpus never used for training or tuning, and explicit reporting of what the available data cannot show.
+\end{itemize}
+To our knowledge, no prior writer-verification work combines these elements, but we do not claim that any single component is new.
+Distillation and likelihood-ratio reporting each have precedent~\cite{tsourounis2023leveraging,ypma2024evidential}.
+
+We study four research questions.
+\textbf{RQ1:} how well does a page-level model separate writers, and does it beat untrained and frozen-feature baselines?
+\textbf{RQ2:} does adding reference pages help, and which fusion rule is best?
+\textbf{RQ3:} does the model transfer to a corpus recorded with a different scanner and protocol (Firemaker), including pages written in a disguised style?
+\textbf{RQ4:} which training ingredients matter: distillation, attention pooling, content-matched batches, writer mining, patch count and augmentation?

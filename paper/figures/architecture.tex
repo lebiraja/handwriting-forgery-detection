@@ -1,0 +1,43 @@
+% Architecture figure (TikZ). \input inside figure*; needs tikz libraries: positioning, arrows.meta, calc, fit, backgrounds.
+\begin{tikzpicture}[
+  font=\footnotesize, >=Stealth,
+  box/.style={draw, rounded corners=2pt, minimum height=10mm, minimum width=29mm, align=center, fill=gray!8, inner sep=3pt},
+  netbox/.style={box, fill=blue!10},
+  lossbox/.style={box, fill=orange!16},
+  frozenbox/.style={box, fill=gray!28, dashed},
+  outbox/.style={box, fill=green!14},
+  panel/.style={font=\footnotesize\bfseries, anchor=west}
+]
+% ================= (a) embedding network and training =================
+\node[panel] at (-1.6,1.55) {(a) Page encoder and training};
+\node[box]    (page)  at (0,0)    {Page\\(full script)};
+\node[box]    (pre)   at (3.3,0) {Preprocess\\crop print, remove\\background, width 1600};
+\node[box]    (patch) at (6.6,0)  {$K$ ink-centred\\patches\\$128{\times}128$};
+\node[netbox] (cnn)   at (9.9,0) {ResNet-18\\(from scratch)\\patch vectors $z_i$};
+\node[netbox] (att)   at (13.2,0) {Attention pooling\\weights $a_i$ per patch};
+\node[netbox] (emb)   at (16.5,0){Page embedding\\$e=\sum_i a_i z_i$, 256-d\\unit length};
+\draw[->] (page) -- (pre);  \draw[->] (pre) -- (patch);  \draw[->] (patch) -- (cnn);
+\draw[->] (cnn) -- (att);   \draw[->] (att) -- (emb);
+
+\node[frozenbox] (teach) at (6.6,-2.7)  {Frozen DINOv2-small\\teacher (training only)};
+\node[lossbox]   (dist)  at (10.9,-2.7) {Feature + relational\\distillation loss};
+\node[lossbox]   (sup)   at (16.5,-2.7){Supervised contrastive loss\\content-matched and\\mined hard negatives};
+\draw[->, dashed] (patch.south) -- (teach.north);
+\draw[->, dashed] (teach.east) -- (dist.west);
+\draw[->, dashed] (cnn.south) -- ++(0,-0.9) -| ([xshift=-4mm]dist.north);
+\draw[->, dashed] (emb.south) -- (sup.north);
+
+% ================= (b) verification at inference =================
+\node[panel] at (-1.6,-4.35) {(b) Verification at inference (teacher and losses are not used)};
+\node[box]    (refs) at (1.3,-5.9)  {$N$ reference pages\\+ questioned page\\same encoder $\to e_j,\,e_q$};
+\node[netbox] (cos)  at (5.2,-5.9)  {Cosine similarity\\$e_q$ to each $e_j$};
+\node[netbox] (fuse) at (9.1,-5.9)  {Fusion\\mean, max, top-2,\\or centroid};
+\node[netbox] (cal)  at (13.0,-5.9) {Calibration\\Platt / isotonic\\fitted on validation};
+\node[outbox] (verd) at (16.9,-5.9) {Verdict\\consistent / inconclusive /\\likely forged};
+\draw[->] (refs) -- (cos);
+\draw[->] (cos) -- (fuse); \draw[->] (fuse) -- (cal); \draw[->] (cal) -- (verd);
+
+\begin{scope}[on background layer]
+  \node[draw=black!40, dashed, rounded corners=3pt, fit=(teach)(dist)(sup), inner sep=3mm] {};
+\end{scope}
+\end{tikzpicture}

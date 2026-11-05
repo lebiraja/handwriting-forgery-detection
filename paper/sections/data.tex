@@ -1,0 +1,17 @@
+\section{Data}
+\label{sec:data}
+We use three corpora, all English.
+The IAM database~\cite{marti2002iam} provides forms by 657 writers; the CVL database~\cite{kleber2013cvl} provides pages by 310 writers who copy the same texts, of which we use the English texts only (the German excerpt is excluded); and Firemaker~\cite{bulacu2003firemaker} provides four pages for each of 250 writers.
+Splits are writer-disjoint (seed 42); writer identifiers are prefixed by corpus.
+Firemaker is never used for training, validation or threshold selection and serves as a cross-dataset test.
+Its third page is written in a deliberately changed style, i.e.\ self-disguise rather than imitation of another person, so we report it as a stress test of intra-writer variation and not as forgery.
+\Cref{tab:data} lists the sizes after preprocessing, generated from the manifest.
+
+\begin{table}[t]
+\caption{Writers and pages after preprocessing. IAM writers with a single page contribute two half-page views to training only; Firemaker is used for testing only.}
+\label{tab:data}
+\centering\scriptsize
+\setlength{\tabcolsep}{3pt}
+\resizebox{\columnwidth}{!}{\input{tables/tab_data}}
+\end{table}
+

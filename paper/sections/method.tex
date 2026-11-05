@@ -1,0 +1,46 @@
+\section{Method}
+\begin{figure*}[t]
+\centering
+\resizebox{\textwidth}{!}{\input{figures/architecture}}
+\caption{Overview. (a) Each page is cut into ink-centred patches, encoded by a ResNet-18 trained from scratch and pooled by attention into one page embedding; a frozen DINOv2 teacher is used only during training. (b) At inference the questioned page is compared with $N$ reference pages, the scores are fused and calibrated, and a three-way verdict is returned.}
+\label{fig:arch}
+\end{figure*}
+
+\subsection{Problem and notation}
+Given a claimed writer with $N\ge1$ reference pages $R=\{r_1,\dots,r_N\}$ and one questioned page $q$, the system returns a similarity score $s(q,R)$ and a verdict.
+All pages are embedded by one network $f$ into unit vectors, so that $s$ is a function of cosine similarities.
+
+\subsection{Preprocessing}
+Each page is converted to gray scale and the printed parts of the forms are removed: for IAM the printed header and footer are cropped using long horizontal separator lines, and for CVL the printed source text above the first separator is cropped.
+The paper tone and scanner shading are removed by dividing by a smoothed morphological-closing background estimate.
+Pages are resized to a width of 1600 px, which keeps stroke scale comparable across 300~dpi scans.
+Pages with an ink fraction below $0.25\%$ are discarded as blank, and duplicate pages are removed by hash.
+
+\subsection{Page encoder}
+A page is treated as a bag of $K$ patches of $128\times128$ pixels.
+Patches are centred on randomly chosen ink pixels and kept only if their ink fraction passes a threshold; the threshold is lowered progressively (5\%, 3\%, 1.5\%, 0.8\%) when a page has too few dense windows, and a page with no usable ink is rejected instead of being padded.
+A ResNet-18~\cite{he2015deep} with a one-channel stem, randomly initialised, maps each patch to a 256-dimensional vector $z_i$.
+Attention pooling~\cite{ilse2018attentionbased} computes weights $a_i=\mathrm{softmax}_i\big(w^\top\tanh(Vz_i)\big)$ and the page embedding $e=\mathrm{normalise}\big(\sum_i a_i z_i\big)$.
+Training uses $K=16$ random patches per page with augmentation (rotation $\pm3^\circ$, scale $\pm10\%$, contrast and brightness, blur, noise and JPEG artefacts); evaluation uses $K=64$ deterministic patches per page, chosen by a seed derived from the page path.
+
+\subsection{Training objective}
+The main loss is the supervised contrastive loss~\cite{khosla2020supervised} with temperature $\tau=0.1$ on page embeddings.
+Each batch contains $W=12$ writers with two different pages each.
+Two kinds of batch are mixed.
+\emph{IAM batches} use random writers and two pages of each writer (or the top and bottom halves of the handwriting area for writers with a single page).
+\emph{Content-matched CVL batches} (40\% of steps) choose two texts and use only writers who wrote both; hence all negatives in the batch share text with the positives' texts, while the two pages of a positive pair differ in text.
+In addition, every 10 epochs the writer centroids are computed with the EMA model and, with probability $0.5$, a batch is built from a writer and its nearest neighbours (hard-writer mining).
+
+\subsection{Distillation from a frozen teacher}
+A frozen DINOv2-small~\cite{oquab2023dinov} teacher embeds the same augmented patches (resized to $126\times126$).
+Two auxiliary losses transfer its structure to the student.
+The feature term is $1-\cos\big(g(z_i),t_i\big)$ with a linear head $g$ and teacher embedding $t_i$.
+The relational term is $\mathrm{KL}\big(\mathrm{softmax}(S^{T}_{i\cdot}/\tau)\,\|\,\mathrm{softmax}(S^{S}_{i\cdot}/\tau)\big)$ between the patch-to-patch cosine similarity matrices of teacher and student, applied to patches and to page embeddings.
+The total loss is $\mathcal{L}_{\mathrm{SupCon}}+0.5\,\mathcal{L}_{\mathrm{feat}}+0.5\,\mathcal{L}_{\mathrm{rel}}$.
+The teacher is not used at inference; the deployed model is the student alone.
+
+\subsection{Multi-reference scoring, calibration and verdict}
+For $N$ references we compare four fusion rules: the mean cosine, the maximum cosine, the mean of the two largest cosines, and the cosine to the renormalised centroid of the reference embeddings.
+Scores are calibrated by logistic (Platt) regression and isotonic regression fitted on validation trials only.
+The verdict uses two thresholds fixed on validation data: a page is \emph{consistent} if $s\ge\tau_{\mathrm{hi}}$, the 99th percentile of validation impostor scores; \emph{likely forged} if $s\le\tau_{\mathrm{lo}}$, the 1st percentile of validation genuine scores; and \emph{inconclusive} otherwise.
+Attention weights give a patch-level map of which regions drove the score.

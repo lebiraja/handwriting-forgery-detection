@@ -1,0 +1,22 @@
+\section{Limitations}
+\label{sec:limits}
+\textbf{No real impersonation data.}
+Public corpora contain genuine pages by many writers but no pages in which one person copies another.
+Our impostors are other writers, which is an easier case than a skilled forger; the content-matched CVL pairs make it harder but are still not imitations.
+The reported error rates are therefore not forgery detection rates.
+
+\textbf{Firemaker page 3 is disguise.}
+The Firemaker authors ask writers to change their own style.
+We use it only to measure how much scores move when the same writer writes differently, and we do not count it as forgery.
+
+\textbf{Synthetic pages.}
+The only synthetic pages we had are font-rendered text, not generated imitations of a particular writer.
+We could not run a handwriting generator in the time available, so robustness to learned imitation is untested.
+
+\textbf{Corpus effects.}
+Pages of one IAM writer share a scanner, pen and session, so IAM error rates are optimistic; we therefore draw conclusions mainly from CVL and from Firemaker, which were never used for tuning.
+We used a third-party copy of IAM.
+All text is English, and most writers are adults who wrote under instruction, unlike exam answers written under time pressure.
+
+\textbf{Scale.}
+All models are small (a ResNet-18 trained on about 2,200 pages) and were trained on one laptop GPU; three seeds are reported, so confidence intervals are wide where few writers are available (for example five reference pages).

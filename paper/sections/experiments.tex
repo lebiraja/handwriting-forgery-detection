@@ -1,0 +1,17 @@
+\section{Experimental Setup}
+\label{sec:exp}
+\subsection{Implementation}
+The student is trained from scratch with AdamW (learning rate $3\times10^{-4}$, weight decay $10^{-4}$), a 5-epoch warm-up and cosine decay over 120 epochs, mixed precision, gradient clipping at 1.0, and an exponential moving average of weights (decay 0.999) that is used for validation and testing.
+Model selection uses the mean of the IAM and CVL validation equal error rates, and training stops after 30 epochs without improvement.
+Experiments ran on a single laptop GPU (RTX 4050, 6~GB) in a Docker container based on PyTorch 2.6 with CUDA 12.4.
+Main results are the mean and standard deviation over three seeds.
+
+\subsection{Protocol and metrics}
+For single-reference evaluation every pair of pages from the same dataset and split is scored; same-writer pairs are genuine and different-writer pairs are impostors, so impostor pairs on CVL include pairs that copy the same text.
+For multi-reference evaluation we draw 1000 genuine and 1000 impostor trials per setting with $N\in\{1,2,3,5\}$ references.
+We report the equal error rate (EER), the area under the ROC curve (AUC), and the false accept rate at a 1\% and 10\% false reject rate.
+Confidence intervals are 95\% bootstrap intervals over writers.
+Thresholds and calibrators are fitted on validation data and applied unchanged to the test sets.
+
+\subsection{Baselines}
+We compare with (i) a randomly initialised encoder, (ii) the same encoder with batch-normalisation statistics adapted on the data but no label training, (iii) frozen DINOv2-small features averaged over patches, and (iv) HOG features averaged over patches.

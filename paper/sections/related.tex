@@ -1,0 +1,22 @@
+\section{Related Work}
+\textbf{Writer identification and retrieval.}
+Text-independent writer identification with CNNs was established by DeepWriter~\cite{xing2016deepwriter}, and later work introduced fragment-based and attention-based models~\cite{he2020fragnet,kumar2024attention}.
+Unsupervised and self-supervised representations have become competitive for retrieval on historical and modern pages~\cite{christlein2017unsupervised,peer2023towards,raven2024selfsupervised,maitra2024decorrelationbased}.
+Recent studies analyse which pipeline factors matter for historical writer identification~\cite{rasyidi2025beyond}.
+These systems answer ``which writer'' or ``which pages are similar''; they do not output a verification decision for a claimed writer.
+
+\textbf{Handwriting verification.}
+Adak et al.\ study writer identification and verification from intra-writer variation~\cite{adak2017an,adak2019intravariable}.
+Shaikh et al.\ propose an attention-based writer-independent verifier~\cite{shaikh2020attention}, and self-supervised pre-training has been applied to the same task~\cite{chauhan2024selfsupervised,wang2023csslrha}.
+Signature verification uses twin networks and metric learning~\cite{dey2017signet,huang2023multiscale,parracho2025signature}.
+Our setting differs in using complete pages and several references.
+
+\textbf{Generated handwriting as a threat.}
+Diffusion and transformer generators produce handwriting in a target style from short style samples~\cite{nikolaidou2023wordstylist,nikolaidou2024diffusionpen,vanherle2024vatr}, including paragraphs~\cite{mayr2024zeroshot}.
+Synthetic data has also been used to pre-train handwriting models~\cite{pippi2023evaluating}.
+
+\textbf{Distillation, fusion and calibration.}
+Knowledge distillation~\cite{hinton2015distilling} has been used in offline signature verification~\cite{tsourounis2023leveraging}.
+Self-supervised ViTs such as DINOv2~\cite{oquab2023dinov} provide strong frozen features.
+Forensic work argues that the strength of evidence should be expressed as a likelihood ratio~\cite{ypma2024evidential}, and modern networks are often poorly calibrated~\cite{guo2017on}.
+We adopt these ideas for page-level handwriting verification.
