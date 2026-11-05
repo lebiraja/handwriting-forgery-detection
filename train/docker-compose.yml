@@ -1,0 +1,22 @@
+services:
+  train:
+    build: .
+    image: handwriting-train:0.1
+    user: "1000:1000"
+    environment:
+      HOME: /tmp
+      PYTORCH_ALLOC_CONF: expandable_segments:True
+    shm_size: "4gb"
+    volumes:
+      - ../datasets:/data:ro
+      - ../models/weights:/models:ro
+      - ./runs:/app/runs
+      - ./src:/app/src
+      - ./tests:/app/tests
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

@@ -1,0 +1,28 @@
+manifest: /data/cache/manifests/master.csv
+datasets: [iam, cvl]
+k: 16                    # patches per page (train)
+k_eval: 64               # patches per page (eval, deterministic)
+size: 128
+writers_per_batch: 12    # x2 pages = 24 pages per step
+cvl_frac: 0.4
+p_mine: 0.5
+mining_every: 10
+epochs: 120
+warmup_epochs: 5
+lr: 0.0003
+weight_decay: 0.0001
+temperature: 0.1
+embed_dim: 256
+pool: attention
+ema_decay: 0.999
+eval_every: 2
+patience: 30
+time_limit_min: 60
+seed: 0
+num_workers: 8
+distill:
+  enabled: true
+  teacher: /models/dinov2-small
+  w_feat: 0.5
+  w_rel: 0.5
+out_dir: /app/runs/main_s0
