@@ -1,5 +1,23 @@
 # STATUS
 
+## 2026-11-06 13:30 IST - Submission files
+- `submission/`: PRS report (.docx/.pdf, 25 pages, template front pages filled, builders in `submission/build/`), review deck (.pptx/.pdf, 21 slides, numbers read from run files), paper LaTeX zip. Added `docs/HOW_TO_RUN.md`, `docs/PROJECT_SUMMARY.md`.
+- Assumptions to confirm: SDG 16 (secondary SDG 4) as the SDG; no "Dr." for the guide; division AI and ML.
+
+## 2026-11-06 12:00 IST - Final evaluation done, paper written (6 pages)
+- **Queue:** all six ablations finished. Final evaluation run once per seed (`train/final_eval.sh`): test, Firemaker, synthetic pages, test baselines, attention/deletion test. Two analysis errors found afterwards and fixed without touching the model (FIXES.md, DECISIONS.md): overlapping IAM verdict thresholds, multi-reference curve confounded with writer set (`src/verdict.py`, `src/multiref.py`).
+- **Test results (3 seeds):** EER IAM 2.35 +- 0.12, CVL 7.30 +- 0.29 (frozen DINOv2 5.44 / 15.02, HOG 11.14 / 23.06, random CNN 23.2 / 30.7). Firemaker p1 vs p4 3.33, upper case 23.87, disguised 32.00. CVL 3-way verdict (3 refs): 8.5% inconclusive, 2.8% error on decided. Controlled multi-reference (centroid): IAM 2.25 -> 1.22, CVL 6.76 -> 5.19 (max rule 3.31, post-hoc).
+- **Negative results kept in the paper:** no ablation shows a clear benefit (full 40-epoch model 5.35 mean val EER vs 4.38 without distillation, 1 seed each); attention deletion test barely separates top-attended from random patches (0.0043 vs 0.0022).
+- **Paper:** `paper/main.tex` builds to 6 pages including references (`latexmk -pdf main.tex`); results, discussion, conclusion and a generated 116-word abstract added; tables and figures from `report.py`. Bibliography set to footnote size without arXiv URLs. Not yet done: ARS citation check, confirm author block (BLOCKERS.md), verify bib entries against published versions.
+- **Demo:** `demo/` (see entry below) still serves `main_s0`; its thresholds are validation-based and unaffected.
+
+## 2026-11-06 08:50 IST - Live demo for staff and panel (`demo/`)
+- New service `demo/`: upload 1-5 reference pages and one questioned page, get consistent / inconclusive / likely forged, similarity score, a distribution strip (validation different-writer vs same-writer scores), attention heatmaps and the top-attended patches. FastAPI on the existing `handwriting-train:0.1` image, **CPU only** (3 cpus) so the GPU queue is untouched. Model: `main_s0/best.pt`; same preprocessing, patch sampler and centroid fusion as `train/src`.
+- Thresholds come from **validation pages only** (`demo/app/calibrate.py`): tau_high 0.909, tau_low 0.673 (more conservative of IAM and CVL, per `eval.three_way` rule). The calibration reproduces the logged val EER (IAM 0.48%, CVL 5.90%). No test or Firemaker number was used or looked at.
+- Six fixed-seed validation sample pairs are bundled (git-ignored, third-party data). Sample results are optimistic (val set fits the thresholds); the UI says so.
+- Run: `cd demo && docker compose up -d` -> http://localhost:8010 ; recalibrate: `docker compose run --rm demo python -m demo.calibrate`. Training dashboard: `python3 train/dashboard/serve.py` -> :8765.
+- Observed: same-writer pairs 0.97 (consistent); IAM different writers 0.57 (likely forged); content-matched CVL different writers 0.83 (inconclusive); about 2.5 s per request on CPU.
+
 ## 2026-11-06 02:05 IST - Overnight stop: 3 main seeds trained, 1 of 7 ablations done
 - **Done:** data prepared and checked; `main_s0/s1/s2` trained (120-epoch schedule, early stopping allowed). Best validation EER (IAM / CVL): s0 0.48% / 5.90%, s1 1.20% / 5.94%, s2 1.03% / 5.59%; mean 3.19 / 3.57 / 3.31%. Baselines on validation: frozen DINOv2-small 5.0 / 16.0, HOG 14.1 / 23.6, random CNN 22.3 / 34.3, random features + BatchNorm 8.5 / 21.3.
 - **Ablations:** `abl_main40` (40-epoch reference) finished (val EER IAM 1.72%, CVL 8.98%, mean 5.35% after 19.5 min); the other six were not started. The queue driver was stopped at the user's request so the laptop can be shut down overnight. Resume with `train/queue_resume.sh`.

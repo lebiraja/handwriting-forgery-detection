@@ -12,3 +12,6 @@ SemVer for the code in `train/`. Unreleased log below; no tagged release yet.
 - Added: `train/queue.sh` / `queue_resume.sh`, repository initialised (master).
 - Trained: main seeds 0-2 and the 40-epoch reference run; six ablations pending.
 - Planned for 0.1.0: `src/report.py`, synthetic-page false-accept test in `eval.py`, final test evaluation.
+- Added: `src/verdict.py` (three-way verdict from saved scores), `src/multiref.py` (controlled multi-reference study), synthetic-page false-accept test in `eval.py`, `train/final_eval.sh`.
+- Fixed: `eval.three_way` overlapping thresholds on separable corpora; multi-reference trials confounded with writer set (see FIXES.md).
+- Added: `demo/` (FastAPI verification demo, CPU) and `train/dashboard/` (live training dashboard).

@@ -11,6 +11,7 @@ We use it only to measure how much scores move when the same writer writes diffe
 
 \textbf{Synthetic pages.}
 The only synthetic pages we had are font-rendered text, not generated imitations of a particular writer.
+They are mostly rejected, but unrelated real pages from the same source are rejected equally, so the test says little about imitation.
 We could not run a handwriting generator in the time available, so robustness to learned imitation is untested.
 
 \textbf{Corpus effects.}
@@ -19,4 +20,4 @@ We used a third-party copy of IAM.
 All text is English, and most writers are adults who wrote under instruction, unlike exam answers written under time pressure.
 
 \textbf{Scale.}
-All models are small (a ResNet-18 trained on about 2,200 pages) and were trained on one laptop GPU; three seeds are reported, so confidence intervals are wide where few writers are available (for example five reference pages).
+All models are small (a ResNet-18 trained on about 2,200 pages) and were trained on one laptop GPU; three seeds are reported, ablations use one seed, and confidence intervals are wide where few writers are available (for example five reference pages).

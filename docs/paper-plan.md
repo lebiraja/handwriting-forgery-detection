@@ -22,7 +22,7 @@ Page-Level Handwriting Forgery Detection with Multi-Reference Verification and C
 - Research questions RQ1 to RQ4 stated in the introduction and used as result subsection headings.
 - Tables are `booktabs` fragments in `paper/tables/` included with `\resizebox{\columnwidth}{!}{\input{tables/tab_x}}`; figures are vector PDFs from `report.py`. Neither is edited by hand.
 - Claim-to-evidence map in `paper-claims-map.md`; no hand-typed numbers.
-- Abstract is dense with the real numbers and written last.
+- Abstract is dense with the real numbers and written last; exactly 270 words (the length of the sem5 deeplearning abstract).
 - Authors: Lincy Jenita J, S. D. Lalitha (guide); both in the Division of Artificial Intelligence and Machine Learning, Karunya Institute of Technology and Sciences (division taken from the PRS front-page template). Title "Dr." for the guide is unknown and left out.
 
 ## Page budget (6 pages, two-column)
@@ -37,10 +37,10 @@ Abstract 0.2, Introduction 0.6, Related 0.5, Data 0.4, Method 1.2 (with the full
 | Data | `sections/data.tex` | drafted |
 | Experimental Setup | `sections/experiments.tex` | drafted |
 | Limitations | `sections/limitations.tex` | drafted |
-| Conclusion | `sections/conclusion.tex` | TODO |
-| Results | `sections/results.tex` | TODO after final evaluation |
-| Discussion and Limitations | `sections/discussion.tex` | TODO |
-| Abstract | `sections/abstract.tex` | TODO (written last, from real numbers) |
+| Conclusion | `sections/conclusion.tex` | DONE |
+| Results | `sections/results.tex` | DONE |
+| Discussion | `sections/discussion.tex` | DONE |
+| Abstract | `sections/abstract.tex` | DONE (generated, 116 words) |
 `main.tex` includes results, discussion and abstract only if the files exist, so the draft compiles now (4 pages, no undefined citations). Build: `cd paper && latexmk -pdf main.tex`.
 
 ## Rules
@@ -70,3 +70,9 @@ Dataset table; main results (EER, AUC, FAR@FRR 1% / 10%) with seed mean and std 
 
 ## References
 `references.bib` (project root, 80 arXiv entries from the arXiv API) is copied to `paper/refs.bib` with IAM, CVL and Firemaker entries added. Verify entries against the published versions before submission.
+
+## Status 2026-11-06 12:00
+Full draft builds to 6 pages including references. Figures kept: architecture, multi-reference, Firemaker; DET/reliability, training curves, baselines bar, verdict bar, attention montage and ablation plot are generated but not included (page limit). Remaining: ARS citation check and disclosure, confirm author block, bibliography verification.
+
+## Update 2026-11-06 12:30
+Page limit relaxed to about 8 to 10 pages; class switched to IEEEtran `[conference]` (sem5 author block); 8 pages including references; all generated figures except the baselines bar and ablation plot are now included (those two are covered by tables).

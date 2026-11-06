@@ -1,0 +1,17 @@
+\section{Discussion}
+\label{sec:discussion}
+\textbf{What the evidence supports.}
+A small student trained from scratch separates writers better than the foundation model it was distilled from, but the two corpora tell different stories.
+IAM errors are low and optimistic: pages of one writer share scanner, pen and session, and a network with untrained features and adapted statistics already reaches 8.5\% on validation.
+CVL, where all writers copy the same text, and Firemaker, where the scanner changes, are the better guides: 7.3\% EER on content-matched pairs and 3.3\% across corpora for ordinary writing.
+
+\textbf{Disguise is the weak point.}
+When the same writer changes style deliberately, EER rises to 24 to 32\%.
+A verdict of ``likely forged'' therefore means ``unlike this writer's ordinary pages'', which a forger and a disguising writer can both produce.
+We see this as a reason to keep the \emph{inconclusive} outcome and to collect more references written under varied conditions, not as a flaw to hide.
+
+\textbf{More references help, but the evidence is thin.}
+The gain from one to three references is visible on both corpora and in every seed, but the intervals overlap and the best fusion rule differed between corpora, so we advise using several references of the same writer and reporting all fusion rules until a separate validation set confirms one.
+
+\textbf{Attention maps and synthetic pages.}
+The deletion test does not support reading attention as an explanation (\Cref{sec:results}), and the font-rendered pages show only that fonts do not resemble real writers; neither measures learned imitation.

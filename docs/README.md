@@ -11,3 +11,5 @@
 Root-level logs (project rules): `../STATUS.md` (newest first), `../DECISIONS.md` (append-only), `../FIXES.md`, `../HANDOVER.md`, `../BLOCKERS.md`, `../VERSIONS.md`.
 Resource lists: `../datasets/DATASETS.md`, `../models/MODELS.md`, `../papers/INDEX.md`.
 There is no `API.md`: the project has no HTTP service.
+- [HOW_TO_RUN.md](HOW_TO_RUN.md): run on GPU and CPU (training, evaluation, demo, reports)
+- [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md): what was done, key results, limits, open items

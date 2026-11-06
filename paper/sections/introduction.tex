@@ -17,10 +17,8 @@ This paper builds and evaluates a page-level verifier under these conditions.
 Our contributions are:
 \begin{itemize}
 \item A page-level verifier that embeds a full script as an attention-pooled bag of ink patches and compares a questioned page with one or several reference pages, with four fusion rules evaluated.
-\item Content-matched hard negatives: for the CVL data, every batch contains different writers copying the same two texts, so the network must separate writers by style instead of text.
-\item A calibrated three-way verdict (consistent, inconclusive, likely forged) with thresholds fixed on validation data, and a likelihood-ratio style score.
-\item A compact ResNet-18 student trained from scratch with distillation from a frozen self-supervised ViT teacher; the teacher is used only during training.
-\item An evaluation protocol with writer-disjoint splits, a cross-dataset test on a corpus never used for training or tuning, and explicit reporting of what the available data cannot show.
+\item Content-matched hard negatives on CVL (different writers copying the same text), a calibrated three-way verdict with thresholds fixed on validation data, and a compact ResNet-18 student distilled from a frozen self-supervised ViT; an ablation shows no clear benefit of any single ingredient in a short schedule.
+\item An evaluation protocol with writer-disjoint splits, a cross-dataset test on a corpus never used for training or tuning, a controlled multi-reference study, and explicit reporting of what the available data cannot show, including that deliberate style change breaks the model.
 \end{itemize}
 To our knowledge, no prior writer-verification work combines these elements, but we do not claim that any single component is new.
 Distillation and likelihood-ratio reporting each have precedent~\cite{tsourounis2023leveraging,ypma2024evidential}.

@@ -1,0 +1,14 @@
+\section{Conclusion}
+We built a page-level handwriting verifier that compares a questioned page with one or several reference pages and returns a calibrated score and a three-way verdict.
+Trained from scratch on about 2,200 pages, it halves the error of frozen DINOv2 features (2.35\% EER on IAM, 7.30\% on CVL), transfers to a new corpus for ordinary writing (3.33\% on Firemaker), and gains from extra reference pages, but it is fooled by deliberate style change (24 to 32\% EER), and none of the training ingredients we ablated is demonstrated to help in a short schedule.
+Because no public data show one person imitating another, our error rates are not forgery detection rates.
+
+\textbf{Future work.}
+The next steps are a real impersonation collection with volunteers, a handwriting generator to test learned imitation, multi-seed ablations at the full schedule, a validation set large enough to choose the fusion rule, and the four Indian languages for which data collection was paused.
+
+\textbf{Reproducibility.}
+Code, configurations, run logs, result files and the scripts that generate every table and figure are in the project repository; IAM, CVL and Firemaker are available from their owners under their own licences.
+
+\textbf{AI-assistance disclosure.}
+Claude (Anthropic) assisted with code, analysis scripts and drafting; the authors are responsible for the content.
+The frozen DINOv2-small teacher is used during training only.

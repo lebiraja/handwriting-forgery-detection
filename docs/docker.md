@@ -70,3 +70,11 @@ Compose note: with `--set seed=1` and `--resume` already in `run_train.sh`, re-r
 - Never `pkill -f` a pattern that also appears in your own command line (it kills the shell). Use `ps ... | awk '/[p]attern/'`.
 - `r.view` on a pandas row is the method `Series.view`; use `r["view"]`.
 - `--resume` is always on in `run_train.sh`; use a new `<run_name>` for a new run.
+
+## Demo service (`demo/docker-compose.yml`)
+Same image `handwriting-train:0.1` (already contains fastapi, uvicorn, python-multipart). CPU only (`CUDA_VISIBLE_DEVICES=""`, `cpus: 3`), port `127.0.0.1:8010`, healthcheck on `/api/health`. Mounts: `../train/src` (ro), `../train/runs/main_s0` (ro, model), `../datasets` (ro, calibration only), `./app` (rw: `calibration.json`, `samples/`).
+```
+cd demo && docker compose up -d                              # http://localhost:8010
+docker compose run --rm demo python -m demo.calibrate         # refit thresholds on VALIDATION pages, rewrite samples
+```
+API: `GET /api/info`, `GET /api/health`, `POST /api/verify` (multipart `reference` x1-5, `questioned`). Live training dashboard: `python3 train/dashboard/serve.py` -> http://localhost:8765.

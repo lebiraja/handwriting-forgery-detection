@@ -5,10 +5,35 @@ The student is trained from scratch with AdamW (learning rate $3\times10^{-4}$, 
 Model selection uses the mean of the IAM and CVL validation equal error rates, and training stops after 30 epochs without improvement.
 Experiments ran on a single laptop GPU (RTX 4050, 6~GB) in a Docker container based on PyTorch 2.6 with CUDA 12.4.
 Main results are the mean and standard deviation over three seeds.
+\Cref{tab:hyper} lists the settings.
+Each main run took about 50 minutes of training (about 26 s per epoch) and stopped at epoch 109, 116 and 119, with the best validation epoch at 79, 93 and 105.
+
+\begin{table}[t]
+\caption{Training and evaluation settings (from \texttt{config.yaml}).}
+\label{tab:hyper}
+\centering\scriptsize
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{ll}
+\toprule
+Setting & Value \\
+\midrule
+Patch size / patches per page (train, eval) & $128\times128$ / 16, 64 \\
+Embedding size, backbone & 256, ResNet-18 (1 channel, random init) \\
+Batch & 12 writers $\times$ 2 pages; 40\% CVL content-matched \\
+Mining & probability 0.5, centroids refreshed every 10 epochs \\
+Optimiser & AdamW, lr $3\times10^{-4}$, weight decay $10^{-4}$ \\
+Schedule & 5 warm-up epochs, cosine, 120 epochs, patience 30 \\
+Contrastive temperature & 0.1 \\
+Distillation weights (feature, relational) & 0.5, 0.5 \\
+EMA decay, gradient clip & 0.999, 1.0 \\
+Hardware & RTX 4050 laptop GPU (6 GB), mixed precision \\
+\bottomrule
+\end{tabular}}
+\end{table}
 
 \subsection{Protocol and metrics}
 For single-reference evaluation every pair of pages from the same dataset and split is scored; same-writer pairs are genuine and different-writer pairs are impostors, so impostor pairs on CVL include pairs that copy the same text.
-For multi-reference evaluation we draw 1000 genuine and 1000 impostor trials per setting with $N\in\{1,2,3,5\}$ references.
+For multi-reference evaluation every $N$ is tested on one fixed set of writers (at least four pages for $N\in\{1,2,3\}$, at least six for $N=5$), with nested reference sets and the same impostor queries for every $N$; an earlier version that let the writer set shrink with $N$ confounded $N$ with writer difficulty and was discarded.
 We report the equal error rate (EER), the area under the ROC curve (AUC), and the false accept rate at a 1\% and 10\% false reject rate.
 Confidence intervals are 95\% bootstrap intervals over writers.
 Thresholds and calibrators are fitted on validation data and applied unchanged to the test sets.
