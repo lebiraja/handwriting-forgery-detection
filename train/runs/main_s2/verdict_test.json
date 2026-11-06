@@ -1,0 +1,26 @@
+{
+ "iam": {
+  "tau_high": 0.8977703878283501,
+  "tau_low": 0.8977703878283501,
+  "separable_on_val": true,
+  "coverage": 1.0,
+  "error_on_decided": 0.005,
+  "accepted": 0.499,
+  "rejected": 0.501,
+  "inconclusive": 0.0,
+  "false_accept_all": 0.004,
+  "false_reject_all": 0.006
+ },
+ "cvl": {
+  "tau_high": 0.845946329832077,
+  "tau_low": 0.6984556043148041,
+  "separable_on_val": false,
+  "coverage": 0.9105,
+  "error_on_decided": 0.025260845689181768,
+  "accepted": 0.4885,
+  "rejected": 0.422,
+  "inconclusive": 0.0895,
+  "false_accept_all": 0.025,
+  "false_reject_all": 0.021
+ }
+}

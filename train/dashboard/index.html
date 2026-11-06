@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Training Queue</title>
+<style>
+:root{--bg:#010102;--fg:#f1eefc;--mut:#9a96ad;--line:#201e30;--ok:#5BF8B1;--run:#AD96F1;--bad:#ff5d6c;--panel:#0a0913}
+@media (prefers-color-scheme:light) and (min-width:99999px){:root{--bg:#f4f2ec;--fg:#1b1b1a;--mut:#6d6b64;--line:#d8d4c8;--ok:#2f7a45;--run:#a9740a;--bad:#b3392f;--panel:#fbfaf6}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+main{max-width:880px;margin:0 auto;padding:28px 16px 60px}
+h1{font:600 13px/1 inherit;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin:0 0 22px}
+.big{font:300 clamp(40px,10vw,76px)/1 Georgia,serif;margin:0}.sub{color:var(--mut);margin:6px 0 22px}
+.bar{height:6px;background:var(--line);overflow:hidden}.bar>i{display:block;height:100%;background:var(--run);transition:width .6s}
+.row{display:grid;grid-template-columns:150px 90px 1fr 110px;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.row.cur{background:var(--panel);margin:0 -10px;padding:12px 10px;border-left:3px solid var(--run)}
+.st{font-size:12px}.done{color:var(--ok)}.running{color:var(--run)}.failed,.stalled{color:var(--bad)}.queued{color:var(--mut)}
+.num{text-align:right;color:var(--mut)}.meta{display:flex;gap:28px;flex-wrap:wrap;margin:26px 0 8px;color:var(--mut);font-size:13px}.meta b{color:var(--fg);font-weight:500}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}figure{margin:0}figcaption{color:var(--mut);font-size:12px;margin-bottom:4px}
+svg{width:100%;height:auto;background:var(--panel);border:1px solid var(--line)}svg text{fill:var(--mut);font:9px ui-monospace,monospace}
+.l1{stroke:var(--run)}.l2{stroke:var(--ok)}.l3{stroke:var(--fg)}svg path{fill:none;stroke-width:1.6}
+@media(max-width:620px){.row{grid-template-columns:1fr 80px;}.row .bar{grid-column:1/3}.row .num{text-align:left}}
+</style></head><body><main>
+<h1>Ablation queue</h1>
+<p class="big" id="eta">...</p><p class="sub" id="fin"></p>
+<div class="bar"><i id="pg" style="width:0"></i></div>
+<div class="meta" id="meta"></div>
+<div id="rows"></div>
+<h1 style="margin-top:34px" id="gt">Current run</h1>
+<div class="charts"><figure><figcaption>training loss</figcaption><svg id="c1" viewBox="0 0 400 160"></svg></figure>
+<figure><figcaption>validation EER (IAM, CVL, mean)</figcaption><svg id="c2" viewBox="0 0 400 160"></svg></figure>
+<figure><figcaption>seconds per epoch</figcaption><svg id="c3" viewBox="0 0 400 160"></svg></figure></div>
+<p class="sub" style="margin-top:28px" id="note"></p>
+</main><script>
+const fmt=s=>{s=Math.max(0,Math.round(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?`${h}h ${m}m`:`${m}m ${s%60}s`};
+const pct=(e)=>e==null?'-':(e*100).toFixed(2)+'%';
+function chart(id,series,xmax){const W=400,H=160,L=38,R=8,T=8,B=18;const svg=document.getElementById(id);
+ const pts=series.flatMap(x=>x.d);if(!pts.length){svg.innerHTML='<text x="150" y="85">waiting for data</text>';return}
+ let lo=Math.min(...pts.map(p=>p[1])),hi=Math.max(...pts.map(p=>p[1]));if(hi-lo<1e-9){hi=lo+1}const pad=(hi-lo)*.08;lo-=pad;hi+=pad;
+ const X=e=>L+(e/xmax)*(W-L-R),Y=v=>T+(1-(v-lo)/(hi-lo))*(H-T-B);let o='';
+ for(let i=0;i<=3;i++){const v=lo+(hi-lo)*i/3,y=Y(v);o+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="2" y="${y+3}">${v<1?v.toFixed(3):v.toFixed(1)}</text>`}
+ o+=`<text x="${L}" y="${H-4}">0</text><text x="${W-R-14}" y="${H-4}">${xmax}</text>`;
+ for(const s of series){if(!s.d.length)continue;o+=`<path class="${s.c}" d="${s.d.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)).join('')}"/>`;
+  const l=s.d[s.d.length-1];o+=`<circle cx="${X(l[0])}" cy="${Y(l[1])}" r="2.5" fill="var(--fg)"/>`}
+ svg.innerHTML=o}
+function render(d){
+  const cur=d.runs.find(r=>r.state==='running'||r.state==='stalled');
+  document.getElementById('eta').textContent=d.queue_done?'Queue complete':fmt(d.finish_at-Date.now()/1000)+' left';
+  document.getElementById('fin').textContent=d.queue_done?'All runs finished.':'Estimated finish '+new Date(d.finish_at*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  document.getElementById('pg').style.width=(d.progress*100).toFixed(1)+'%';
+  const g=d.gpu;
+  document.getElementById('meta').innerHTML=`<span>epochs <b>${(d.progress*100).toFixed(0)}%</b></span>`+(g?`<span>GPU <b>${g.temp}°C</b></span><span>util <b>${g.util}%</b></span><span>VRAM <b>${(g.mem_used/1024).toFixed(1)}/${(g.mem_total/1024).toFixed(1)} GB</b></span>`:'<span>GPU n/a</span>')+`<span>est. <b>${d.est_sec_epoch.toFixed(0)} s/epoch</b> for queued runs</span>`;
+  document.getElementById('rows').innerHTML=d.runs.map(r=>{
+   const p=Math.min(100,r.epoch/r.epochs*100);
+   const right=r.state==='running'?fmt(r.eta_at-Date.now()/1000):r.state==='done'?'best '+pct(r.best):r.state==='queued'?'~'+fmt(r.epochs*d.est_sec_epoch+45):r.state;
+   return `<div class="row ${r===cur?'cur':''}"><span>${r.name}</span><span class="st ${r.state}">${r.state}</span>
+   <div><div class="bar"><i style="width:${p}%"></i></div>${r.state==='running'?`<div class="sub" style="margin:4px 0 0;font-size:12px">epoch ${r.epoch}/${r.epochs} · ${r.sec?r.sec.toFixed(0):'-'} s/epoch · loss ${r.loss?r.loss.toFixed(3):'-'} · best val EER ${pct(r.best)}</div>`:''}</div>
+   <span class="num">${right}</span></div>`}).join('');
+  const sh=cur||[...d.runs].reverse().find(r=>r.hist.length)||d.runs[0];
+  document.getElementById('gt').textContent=(cur?'Running: ':'Last run: ')+sh.name;
+  chart('c1',[{c:'l1',d:sh.hist.filter(h=>h[1]!=null).map(h=>[h[0],h[1]])}],sh.epochs);
+  chart('c2',[{c:'l1',d:sh.vhist.filter(v=>v[2]!=null).map(v=>[v[0],v[2]])},{c:'l2',d:sh.vhist.filter(v=>v[3]!=null).map(v=>[v[0],v[3]])},{c:'l3',d:sh.vhist.filter(v=>v[1]!=null).map(v=>[v[0],v[1]])}],sh.epochs);
+  chart('c3',[{c:'l3',d:sh.hist.filter(h=>h[2]!=null).map(h=>[h[0],h[2]])}],sh.epochs);
+  document.getElementById('note').textContent='Live via server push (1 s). Validation EER lines: lavender IAM, green CVL, white mean. ETA assumes queued runs match the median finished run.';
+}
+let last=null;setInterval(()=>{if(last)render(last)},1000);
+function connect(){const es=new EventSource('/stream');es.onmessage=e=>{last=JSON.parse(e.data);render(last)};
+ es.onerror=()=>{document.getElementById('eta').textContent='reconnecting...';es.close();setTimeout(connect,2000)}}
+connect();
+</script></body></html>

@@ -73,6 +73,8 @@ def ece(p, y, bins=10):
 def three_way(val_y, val_s, test_y, test_s, far=0.01, frr=0.01):
     hi = np.quantile(val_s[val_y == 0], 1 - far)  # accept only above 99th pct of val impostors
     lo = np.quantile(val_s[val_y == 1], frr)       # reject only below 1st pct of val genuine
+    if hi < lo:  # classes separable on validation: the two rules would overlap; use one midpoint, no inconclusive band
+        hi = lo = (hi + lo) / 2
     acc, rej = test_s >= hi, test_s <= lo
     dec = acc | rej
     err = ((acc & (test_y == 0)) | (rej & (test_y == 1))).sum()
@@ -149,6 +151,21 @@ def main():
             SC[f"fm_{c}_gen"], SC[f"fm_{c}_imp"] = gen, imp
             out[f"p1_vs_{c}"] = {"eer": eer_auc(y, s)[0], "auc": eer_auc(y, s)[1], "genuine_mean": float(gen.mean()), "impostor_mean": float(imp.mean()), "n_writers": len(common)}
         res["firemaker"] = out
+    if a.test:  # synthetic-page false-accept rate: font-rendered Kaggle pages (NOT AI forgeries) vs real test pages
+        import pandas as pd, tempfile
+        kg = pd.read_csv(a.manifest.replace("master.csv", "kg_pages.csv")); kg = kg[kg.status == "ok"]
+        kg = pd.DataFrame({"path": kg.cache, "writer": kg.writer, "split": "test", "dataset": "kg", "cond": kg.cond, "view": "full", "page": kg.page})
+        tmp = tempfile.mktemp(suffix=".csv", dir="/tmp"); kg.to_csv(tmp, index=False)
+        ke, kw, kd, kdf = embed_split(model, tmp, "test", ["kg"], a.k, a.tta, dev)
+        syn = {}
+        for name in sorted(set(E["test"][2])):
+            vy, vs = SC[f"val_{name}_pair_y"], SC[f"val_{name}_pair_s"]; tau = float(np.quantile(vs[vy == 0], 0.99))
+            re_ = E["test"][0][E["test"][2] == name]; out_ = {"tau_high_val": tau}
+            for cond in ("generated", "real"):
+                sc = ke[kdf.cond.values == cond] @ re_.T
+                out_[cond] = {"n_pages": int((kdf.cond.values == cond).sum()), "false_accept": float((sc >= tau).mean()), "mean_score": float(sc.mean()), "max_per_page_fa": float((sc.max(1) >= tau).mean())}
+            syn[name] = out_
+        res["synthetic"] = syn
     np.savez_compressed(a.out.replace(".json", "_scores.npz"), **SC)
     json.dump(res, open(a.out, "w"), indent=1); print(json.dumps({k: v for k, v in res.items() if k in ("val", "test", "firemaker")})[:1500])
 

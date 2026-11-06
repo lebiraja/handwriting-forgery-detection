@@ -84,22 +84,26 @@ def fig_baselines(runs, out):
     save(fig, out, "fig_baselines")
 
 
-def fig_multiref(evals, out, split, tag):
-    if not evals: return print("skip multi-reference: no eval files")
-    fig, axes = plt.subplots(1, 2, figsize=(7.1, 2.6))
+def multiref_runs(runs):
+    return [json.load(open(f)) for f in sorted(glob.glob(f"{runs}/main_s[0-9]*/multiref_test.json"))]
+
+
+def fig_multiref(runs, out):
+    mr = multiref_runs(runs)
+    if not mr: return print("skip multi-reference: run src.multiref first")
+    fig, axes = plt.subplots(1, 2, figsize=(7.1, 2.1))
     for ax, ds in zip(axes, ("iam", "cvl")):
-        ends = []
         for how, (col, mk, ls) in FUSION.items():
-            xs, ys, es = [], [], []
-            for n in (1, 2, 3, 5):
-                vals = [e[split][ds]["multi_ref"][f"N{n}_{how}"] for e in evals if f"N{n}_{how}" in e[split][ds]["multi_ref"]]
-                if vals and min(v.get("writers", 99 if n < 5 else 0) for v in vals) >= 15:  # skip points built from < 15 writers
-                    xs.append(n); ys.append(100 * np.mean([v["eer"] for v in vals])); es.append(100 * np.std([v["eer"] for v in vals]))
-            if xs:
-                ax.errorbar(xs, ys, yerr=es, color=col, marker=mk, ls=ls, capsize=1.5, elinewidth=0.6, label=FUSION_NAME[how]); ends.append((ys[-1], FUSION_NAME[how]))
-        ax.set(xlabel="number of reference pages $N$", title=f"{NAMES[ds]} ({split})", xticks=[1, 2, 3, 5]); ax.margins(x=0.12)
-    axes[0].set_ylabel(f"{split} EER (%), mean $\\pm$ sd over seeds"); top_legend(fig, axes[0], 4)
-    save(fig, out, f"fig_multiref_{tag}")
+            ys = [100 * np.mean([m[ds]["common_N123"]["results"][f"N{n}_{how}"]["eer"] for m in mr]) for n in (1, 2, 3)]
+            es = [100 * np.std([m[ds]["common_N123"]["results"][f"N{n}_{how}"]["eer"] for m in mr]) for n in (1, 2, 3)]
+            ax.errorbar([1, 2, 3], ys, yerr=es, color=col, marker=mk, ls=ls, capsize=1.5, elinewidth=0.6, label=FUSION_NAME[how])
+        ax.set(xlabel="number of reference pages $N$", title=f"{NAMES[ds]} test, same {mr[0][ds]['common_N123']['writers']} writers for every $N$", xticks=[1, 2, 3]); ax.margins(x=0.12)
+    axes[0].set_ylabel("test EER (%), mean $\\pm$ sd over seeds"); top_legend(fig, axes[0], 4)
+    save(fig, out, "fig_multiref_test")
+
+
+def verdict_runs(runs):
+    return [json.load(open(f)) for f in sorted(glob.glob(f"{runs}/main_s[0-9]*/verdict_test.json"))]
 
 
 def fig_ablation(runs, out):
@@ -133,11 +137,12 @@ def fig_det_and_calibration(scores, out):
     save(fig, out, "fig_det_calibration")
 
 
-def fig_verdict(evals, out):
-    if not evals or "three_way" not in evals[0]: return print("skip verdict figure: no test calibration yet")
+def fig_verdict(runs, out):
+    vs = verdict_runs(runs)
+    if not vs: return print("skip verdict figure: run src.verdict first")
     fig, ax = plt.subplots(figsize=(3.45, 2.3)); parts = (("accepted", "consistent", BLUE), ("inconclusive", "inconclusive", "#bbbbbb"), ("rejected", "likely forged", ORANGE)); bottom = np.zeros(2)
     for k, lab, col in parts:
-        v = np.array([100 * np.mean([e["three_way"][d][k] for e in evals]) for d in ("iam", "cvl")]); ax.bar([0, 1], v, bottom=bottom, color=col, label=lab, width=0.55); bottom += v
+        v = np.array([100 * np.mean([e[d][k] for e in vs]) for d in ("iam", "cvl")]); ax.bar([0, 1], v, bottom=bottom, color=col, label=lab, width=0.55); bottom += v
     ax.set_xticks([0, 1], ["IAM", "CVL"]); ax.set(ylabel="share of test trials (%)"); top_legend(fig, ax, 3)
     save(fig, out, "fig_verdict")
 
@@ -208,7 +213,7 @@ def tab_main(runs, out, split, fname):
             cells = [ms([x[ds]["eer"] for x in sd]) if m == "eer" else ms([x[ds]["auc"] for x in sd], 1, 3) for ds in ("iam", "cvl") for m in ("eer", "auc")]
             L.append(f"{label} & " + " & ".join(cells) + " \\\\")
     cells = [ms([e[split][ds]["single_ref"]["eer"] for e in ev]) if m == "eer" else ms([e[split][ds]["single_ref"]["auc"] for e in ev], 1, 3) for ds in ("iam", "cvl") for m in ("eer", "auc")]
-    L += ["\\midrule", f"Ours, {len(ev)} seed(s) & " + " & ".join(f"\\textbf{{{c}}}" for c in cells) + " \\\\", "\\bottomrule", "\\end{tabular}"]
+    L += ["\\midrule", f"Ours ({len(ev)} seeds) & " + " & ".join(f"\\textbf{{{c}}}" for c in cells) + " \\\\", "\\bottomrule", "\\end{tabular}"]
     write_table(out, "tab_main", L)
 
 
@@ -225,13 +230,33 @@ def tab_firemaker(runs, out, fname):
 
 
 def tab_verdict(runs, out, fname):
-    ev = seed_evals(runs, fname)
-    if not ev or "three_way" not in ev[0]: return print("skip tab_verdict: no test calibration yet")
+    vs, ev = verdict_runs(runs), seed_evals(runs, fname)
+    if not vs or not ev: return print("skip tab_verdict: run src.verdict first")
     L = ["\\begin{tabular}{lccccc}", "\\toprule", "Corpus & Consistent & Likely forged & Inconclusive & Error (decided) & ECE (Platt) \\\\", "\\midrule"]
     for ds in ("iam", "cvl"):
-        t = [e["three_way"][ds] for e in ev]; c = [e["calibration"][ds]["ece_platt"] for e in ev]
+        t = [v[ds] for v in vs]; c = [e["calibration"][ds]["ece_platt"] for e in ev]
         L.append(f"{NAMES[ds]} & {ms([x['accepted'] for x in t], 100, 1)} & {ms([x['rejected'] for x in t], 100, 1)} & {ms([x['inconclusive'] for x in t], 100, 1)} & {ms([x['error_on_decided'] for x in t], 100, 2)} & {ms(c, 1, 3)} \\\\")
     L += ["\\bottomrule", "\\end{tabular}"]; write_table(out, "tab_verdict", L)
+
+
+def tab_synthetic(runs, out, fname):
+    ev = seed_evals(runs, fname)
+    if not ev or "synthetic" not in ev[0]: return print("skip tab_syn")
+    L = ["\\begin{tabular}{llccc}", "\\toprule", "Corpus & Kaggle pages & Pairs accepted (\\%) & Mean cosine & Pages accepted by $\\geq$1 writer (\\%) \\\\", "\\midrule"]
+    for ds in ("iam", "cvl"):
+        for cond, lab in (("generated", "font-rendered"), ("real", "real, unknown writer")):
+            t = [e["synthetic"][ds][cond] for e in ev]
+            L.append(f"{NAMES[ds]} & {lab} & {ms([x['false_accept'] for x in t], 100, 3)} & {ms([x['mean_score'] for x in t], 1, 2)} & {ms([x['max_per_page_fa'] for x in t], 100, 1)} \\\\")
+    L += ["\\bottomrule", "\\end{tabular}"]; write_table(out, "tab_syn", L)
+
+
+def tab_seeds(runs, out):
+    ev, vd = seed_evals(runs, "eval_test.json"), verdict_runs(runs)
+    if not ev: return print("skip tab_seeds")
+    L = ["\\begin{tabular}{lccccc}", "\\toprule", "Seed & IAM EER & CVL EER & Firemaker p4 & Firemaker p3 & CVL inconcl. (\\%) \\\\", "\\midrule"]
+    for i, e in enumerate(ev):
+        L.append(f"{i} & {100*e['test']['iam']['single_ref']['eer']:.2f} & {100*e['test']['cvl']['single_ref']['eer']:.2f} & {100*e['firemaker']['p1_vs_p4-self-natural']['eer']:.2f} & {100*e['firemaker']['p1_vs_p3-copy-forged']['eer']:.2f} & {100*vd[i]['cvl']['inconclusive']:.1f} \\\\")
+    L += ["\\bottomrule", "\\end{tabular}"]; write_table(out, "tab_seeds", L)
 
 
 def tab_ablation(runs, out):
@@ -244,28 +269,31 @@ def tab_ablation(runs, out):
     L += ["\\bottomrule", "\\end{tabular}"]; write_table(out, "tab_abl", L)
 
 
-TEMPLATE = ("Disputed handwritten scripts require deciding whether a questioned page matches a writer's earlier pages, yet most deep verifiers compare words or signatures. "
-            "We embed a full page as an attention-pooled bag of ink patches with a ResNet-18 trained from scratch, using content-matched hard negatives and distillation from a frozen DINOv2 teacher. "
-            "On held-out writers it reaches {iam} EER on IAM and {cvl} on CVL ({n} seeds), against {d_iam} and {d_cvl} for frozen DINOv2 features. "
-            "On Firemaker, never used for tuning, EER is {fm}. "
-            "Fusing {nref} reference pages lowers CVL EER to {mr}. "
-            "A calibrated three-way verdict decides {cov}% of trials with {err}% error. "
-            "No public data show one writer imitating another, so these are not forgery detection rates.")
+ABSTRACT_WORDS = 270  # exact length of the abstract of the sem5 deeplearning paper (counted from its PDF)
+TEMPLATE = ("Disputed handwritten scripts, such as an exam answer sheet suspected of being copied in another person's hand, require deciding whether a questioned page is consistent with a writer's earlier pages, yet most deep verifiers compare single words or signatures. "
+            "We study page-level, multi-reference verification: a full page is embedded as an attention-pooled bag of ink patches by a ResNet-18 trained from scratch with content-matched hard negatives and distillation from a frozen DINOv2 teacher, and one or several reference pages are fused into a calibrated three-way verdict (consistent, inconclusive, likely forged). "
+            "We train three seeds on IAM and CVL with writer-disjoint splits and test exactly once on held-out writers and on Firemaker, a separate corpus never used for training or tuning. "
+            "The model reaches {iam} EER on IAM and {cvl} on CVL, against {d_iam} and {d_cvl} for frozen DINOv2 features, {h_iam} and {h_cvl} for HOG, and {r_iam} and {r_cvl} for an untrained network. "
+            "On Firemaker, ordinary writing transfers across corpora ({fm} EER), but upper-case copying ({up}) and deliberately disguised writing ({dis}) break it. "
+            "On one fixed set of writers, three reference pages lower the centroid-fusion EER from {i1} to {i3} on IAM and from {m1} to {m3} on CVL, and the maximum rule alone reaches {mx} on CVL, a post-hoc observation. "
+            "A verdict calibrated on validation data leaves {inc}% of CVL trials inconclusive and is wrong on {err}% of the rest. "
+            "No ablated training ingredient shows a clear benefit in a short, single-seed, 40-epoch comparison. "
+            "No public data show one person imitating another, so these are not forgery detection rates, and the font-rendered pages we tested say nothing about learned imitation.")
 
 
-def write_abstract(runs, out, limit=120):
-    ev = seed_evals(runs, "eval_test.json")
-    b2 = f"{runs}/baselines/b2_test.json"
-    if not ev or not os.path.exists(b2) or "firemaker" not in ev[0] or "three_way" not in ev[0]: return print("skip abstract: final test evaluation not complete")
-    d2 = json.load(open(b2))["seed0"]; m = lambda f: np.mean([f(e) for e in ev])
-    best = {k: m(lambda e, k=k: e["test"]["cvl"]["multi_ref"][k]["eer"]) for k in ev[0]["test"]["cvl"]["multi_ref"] if k.endswith("_centroid") and e_ok(ev, k)}
-    bk = min(best, key=best.get)
-    cov = np.mean([m(lambda e, d=d: e["three_way"][d]["coverage"]) for d in ("iam", "cvl")]); err = np.mean([m(lambda e, d=d: e["three_way"][d]["error_on_decided"]) for d in ("iam", "cvl")])
-    txt = TEMPLATE.format(iam=f"{100*m(lambda e: e['test']['iam']['single_ref']['eer']):.1f}%", cvl=f"{100*m(lambda e: e['test']['cvl']['single_ref']['eer']):.1f}%", n=len(ev),
-                          d_iam=f"{100*d2['iam']['eer']:.1f}%", d_cvl=f"{100*d2['cvl']['eer']:.1f}%", fm=f"{100*m(lambda e: e['firemaker']['p1_vs_p4-self-natural']['eer']):.1f}%",
-                          nref=bk.split("_")[0][1:], mr=f"{100*best[bk]:.1f}%", cov=f"{100*cov:.0f}", err=f"{100*err:.1f}")
+def write_abstract(runs, out, limit=ABSTRACT_WORDS):
+    ev, vs = seed_evals(runs, "eval_test.json"), verdict_runs(runs); mr = multiref_runs(runs)
+    base = {n: json.load(open(f"{runs}/baselines/{n}_test.json")) for n in ("b0", "b2", "b3")}
+    if not ev or not vs or not mr or not all(os.path.exists(f"{runs}/baselines/{n}_test.json") for n in base): return print("skip abstract: final test evaluation not complete")
+    m = lambda f: np.mean([f(e) for e in ev]); be = lambda n, d: np.mean([base[n][k][d]["eer"] for k in base[n]])
+    r = lambda ds, n, how="centroid": np.mean([x[ds]["common_N123"]["results"][f"N{n}_{how}"]["eer"] for x in mr]); p = lambda v, nd=1: f"{100*v:.{nd}f}%"
+    txt = TEMPLATE.format(iam=p(m(lambda e: e["test"]["iam"]["single_ref"]["eer"]), 2), cvl=p(m(lambda e: e["test"]["cvl"]["single_ref"]["eer"]), 2),
+                          d_iam=p(be("b2", "iam"), 2), d_cvl=p(be("b2", "cvl"), 2), h_iam=p(be("b3", "iam")), h_cvl=p(be("b3", "cvl")), r_iam=p(be("b0", "iam")), r_cvl=p(be("b0", "cvl")),
+                          fm=p(m(lambda e: e["firemaker"]["p1_vs_p4-self-natural"]["eer"])), up=p(m(lambda e: e["firemaker"]["p1_vs_p2-copy-upper"]["eer"])), dis=p(m(lambda e: e["firemaker"]["p1_vs_p3-copy-forged"]["eer"])),
+                          i1=p(r("iam", 1), 2), i3=p(r("iam", 3), 2), m1=p(r("cvl", 1), 2), m3=p(r("cvl", 3), 2), mx=p(r("cvl", 3, "max"), 2),
+                          inc=f"{100*np.mean([v['cvl']['inconclusive'] for v in vs]):.1f}", err=f"{100*np.mean([v['cvl']['error_on_decided'] for v in vs]):.1f}")
     words = len(txt.split())
-    if words > limit: raise SystemExit(f"abstract has {words} words, limit {limit}")
+    if words != limit: raise SystemExit(f"abstract has {words} words, must be exactly {limit}")
     os.makedirs(f"{out}/sections", exist_ok=True); open(f"{out}/sections/abstract.tex", "w").write(txt.replace("%", "\\%") + "\n"); print(f"wrote abstract ({words} words)")
 
 
@@ -279,10 +307,9 @@ def main():
     if os.path.exists(a.manifest): table_data(a.manifest, a.out)
     fig_training(a.runs, a.out); fig_baselines(a.runs, a.out); fig_ablation(a.runs, a.out)
     ev_val, ev_test = seed_evals(a.runs, "eval_val.json"), seed_evals(a.runs, "eval_test.json")
-    fig_multiref(ev_val, a.out, "val", "val")
-    if ev_test: fig_multiref(ev_test, a.out, "test", "test"); fig_verdict(ev_test, a.out)
+    fig_multiref(a.runs, a.out); fig_verdict(a.runs, a.out)
     sc = f"{a.runs}/{a.run}/eval_test_scores.npz"; fig_det_and_calibration(sc, a.out); fig_firemaker(sc, a.out); fig_attention(f"{a.runs}/{a.run}/explain", a.out)
-    tab_main(a.runs, a.out, a.split, f"eval_{a.split}.json"); tab_firemaker(a.runs, a.out, "eval_test.json"); tab_verdict(a.runs, a.out, "eval_test.json"); tab_ablation(a.runs, a.out); write_abstract(a.runs, a.out)
+    tab_main(a.runs, a.out, a.split, f"eval_{a.split}.json"); tab_firemaker(a.runs, a.out, "eval_test.json"); tab_verdict(a.runs, a.out, "eval_test.json"); tab_synthetic(a.runs, a.out, "eval_test.json"); tab_seeds(a.runs, a.out); tab_ablation(a.runs, a.out); write_abstract(a.runs, a.out)
 
 
 if __name__ == "__main__":
