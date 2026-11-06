@@ -259,6 +259,37 @@ def tab_seeds(runs, out):
     L += ["\\bottomrule", "\\end{tabular}"]; write_table(out, "tab_seeds", L)
 
 
+def tab_multiref_full(runs, out):
+    mr = multiref_runs(runs)
+    if not mr: return print("skip tab_multiref_full")
+    L = ["\\begin{tabular}{llcccccc}", "\\toprule", "Corpus & Rule & $N{=}1$ & $N{=}2$ & $N{=}3$ \\\\", "\\midrule"]
+    L = ["\\begin{tabular}{llccc}", "\\toprule", "Corpus (writers) & Rule & $N{=}1$ & $N{=}2$ & $N{=}3$ \\\\", "\\midrule"]
+    for ds in ("iam", "cvl"):
+        w = mr[0][ds]["common_N123"]["writers"]
+        for how in ("mean", "max", "top2", "centroid"):
+            cells = [ms([m[ds]["common_N123"]["results"][f"N{n}_{how}"]["eer"] for m in mr]) for n in (1, 2, 3)]
+            L.append(f"{NAMES[ds]} ({w}) & {FUSION_NAME[how]} & " + " & ".join(cells) + " \\\\")
+        if ds == "iam": L.append("\\midrule")
+    L += ["\\bottomrule", "\\end{tabular}"]; write_table(out, "tab_multiref_full", L)
+    L = ["\\begin{tabular}{lcccc}", "\\toprule", "IAM, 17 writers with $\\geq$6 pages & $N{=}1$ & $N{=}2$ & $N{=}3$ & $N{=}5$ \\\\", "\\midrule"]
+    for how in ("mean", "max", "top2", "centroid"):
+        cells = [ms([m["iam"]["common_N1235"]["results"][f"N{n}_{how}"]["eer"] for m in mr]) for n in (1, 2, 3, 5)]
+        L.append(f"{FUSION_NAME[how]} & " + " & ".join(cells) + " \\\\")
+    L += ["\\bottomrule", "\\end{tabular}"]; write_table(out, "tab_multiref_n5", L)
+
+
+def tab_calib(runs, out):
+    vs, ev = verdict_runs(runs), seed_evals(runs, "eval_test.json")
+    if not vs or not ev: return print("skip tab_calib")
+    L = ["\\begin{tabular}{llccccc}", "\\toprule", "Corpus & Seed & $\\tau_{\\mathrm{lo}}$ & $\\tau_{\\mathrm{hi}}$ & ECE raw & ECE Platt & ECE isotonic \\\\", "\\midrule"]
+    for ds in ("iam", "cvl"):
+        for i, (v, e) in enumerate(zip(vs, ev)):
+            c = e["calibration"][ds]
+            L.append(f"{NAMES[ds]} & {i} & {v[ds]['tau_low']:.3f} & {v[ds]['tau_high']:.3f} & {c['ece_raw']:.3f} & {c['ece_platt']:.3f} & {c['ece_iso']:.3f} \\\\")
+        if ds == "iam": L.append("\\midrule")
+    L += ["\\bottomrule", "\\end{tabular}"]; write_table(out, "tab_calib", L)
+
+
 def tab_ablation(runs, out):
     names = [("abl_main40", "Full model (40 epochs)"), ("abl_no_distill", "No distillation"), ("abl_mean_pool", "Mean pooling"), ("abl_no_cmatch", "No content-matched batches"),
              ("abl_no_mining", "No writer mining"), ("abl_k8", "8 patches per page"), ("abl_no_aug", "No augmentation")]
@@ -309,7 +340,7 @@ def main():
     ev_val, ev_test = seed_evals(a.runs, "eval_val.json"), seed_evals(a.runs, "eval_test.json")
     fig_multiref(a.runs, a.out); fig_verdict(a.runs, a.out)
     sc = f"{a.runs}/{a.run}/eval_test_scores.npz"; fig_det_and_calibration(sc, a.out); fig_firemaker(sc, a.out); fig_attention(f"{a.runs}/{a.run}/explain", a.out)
-    tab_main(a.runs, a.out, a.split, f"eval_{a.split}.json"); tab_firemaker(a.runs, a.out, "eval_test.json"); tab_verdict(a.runs, a.out, "eval_test.json"); tab_synthetic(a.runs, a.out, "eval_test.json"); tab_seeds(a.runs, a.out); tab_ablation(a.runs, a.out); write_abstract(a.runs, a.out)
+    tab_main(a.runs, a.out, a.split, f"eval_{a.split}.json"); tab_firemaker(a.runs, a.out, "eval_test.json"); tab_verdict(a.runs, a.out, "eval_test.json"); tab_synthetic(a.runs, a.out, "eval_test.json"); tab_seeds(a.runs, a.out); tab_multiref_full(a.runs, a.out); tab_calib(a.runs, a.out); tab_ablation(a.runs, a.out); write_abstract(a.runs, a.out)
 
 
 if __name__ == "__main__":

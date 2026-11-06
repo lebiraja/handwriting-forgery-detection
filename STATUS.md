@@ -1,5 +1,8 @@
 # STATUS
 
+## 2026-11-06 14:30 IST - Paper lengthened to 10 / 18 pages
+- Added `paper/sections/appendix.tex` (implementation details, full multi-reference tables, per-seed calibration, ablation and demo figures, responsible use, reproducibility) and generated tables `tab_multiref_full`, `tab_multiref_n5`, `tab_calib` in `report.py`. `main.tex` (two columns) is now 10 pages; new `main_manuscript.tex` (IEEEtran journal, single column 12 pt) is 18 pages. No result changed; all added content comes from existing files.
+
 ## 2026-11-06 13:30 IST - Submission files
 - `submission/`: PRS report (.docx/.pdf, 25 pages, template front pages filled, builders in `submission/build/`), review deck (.pptx/.pdf, 21 slides, numbers read from run files), paper LaTeX zip. Added `docs/HOW_TO_RUN.md`, `docs/PROJECT_SUMMARY.md`.
 - Assumptions to confirm: SDG 16 (secondary SDG 4) as the SDG; no "Dr." for the guide; division AI and ML.
