@@ -31,3 +31,6 @@ paper/*.synctex.gz
 paper/*.run.xml
 paper/*.toc
 paper/main.pdf
+
+# demo: third-party sample pages
+demo/app/samples/

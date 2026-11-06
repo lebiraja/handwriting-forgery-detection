@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Handwriting Verification</title>
+<style>
+:root{--bg:#010102;--ink:#f1eefc;--mut:#9a96ad;--line:#201e30;--panel:#0a0913;--amber:#AD96F1;--ok:#5BF8B1;--bad:#ff5d6c;--mid:#AD96F1}
+*{box-sizing:border-box}html{background:var(--bg)}body{background:radial-gradient(900px 420px at 88% -8%,#AD96F126,transparent 70%),radial-gradient(700px 360px at -5% 30%,#5BF8B112,transparent 70%),var(--bg)}
+body{margin:0;color:var(--ink);font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+main{max-width:1180px;margin:0 auto;padding:0 20px 80px}
+header{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;padding:22px 0 18px;border-bottom:1px solid var(--line)}
+header h1{margin:0;font:600 12px/1 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase}
+header span{color:var(--mut);font-size:12px}
+.lead{font:300 clamp(30px,5vw,54px)/1.08 Georgia,"Times New Roman",serif;margin:36px 0 8px;max-width:820px}
+.lead em{color:var(--amber);font-style:italic}
+.sub{color:var(--mut);max-width:680px;margin:0 0 28px}
+.slots{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.slot{position:relative;min-height:380px;border:1px dashed #4b4466;background:var(--panel);display:flex;flex-direction:column;cursor:pointer;transition:border-color .15s,background .15s}
+.slot.drag{border-color:var(--amber);background:#15112b}
+.slot.has{border-style:solid;border-color:var(--line);cursor:default}
+.slot label.tag{position:absolute;left:0;top:0;padding:6px 10px;background:var(--amber);color:#010102;font:600 11px/1 ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;z-index:2}
+.empty{margin:auto;text-align:center;color:var(--mut);padding:40px 24px}
+.empty b{display:block;color:var(--ink);font:400 22px/1.2 Georgia,serif;margin-bottom:8px}
+.thumbs{display:flex;gap:10px;padding:44px 12px 12px;flex-wrap:wrap;flex:1;align-content:flex-start}
+.thumbs figure{margin:0;position:relative;flex:1 1 100%}
+.thumbs.multi figure{flex:1 1 calc(50% - 10px)}
+.thumbs img{width:100%;max-height:560px;object-fit:contain;background:#fff;display:block}
+.thumbs button{position:absolute;right:6px;top:6px;border:0;background:#111c;color:#fff;width:26px;height:26px;cursor:pointer;font-size:15px}
+.slotbar{display:flex;justify-content:space-between;gap:8px;padding:8px 12px;border-top:1px solid var(--line);font-size:12px;color:var(--mut)}
+.slotbar button,.btn{background:none;border:1px solid #4b4466;color:var(--ink);padding:6px 12px;cursor:pointer;font:inherit}
+.slotbar button:hover,.btn:hover{border-color:var(--amber);color:var(--amber)}
+.samples{margin:16px 0 0;color:var(--mut);font-size:13px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.samples button{font-size:12px;padding:4px 10px}
+#status{margin:30px 0 0;min-height:24px;color:var(--mut)}
+#status.err{color:var(--bad)}
+.result{margin-top:10px;border-top:1px solid var(--line);padding-top:28px;display:none}
+.vrow{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:34px;align-items:end}
+.verdict{font:300 clamp(44px,8vw,96px)/.95 Georgia,serif;margin:0;letter-spacing:-.01em}
+.verdict.consistent{color:var(--ok)}.verdict.inconclusive{color:var(--mid)}.verdict.likely_forged{color:var(--bad)}
+.vline{color:var(--mut);margin:12px 0 0;max-width:560px}
+.score{font:300 64px/1 Georgia,serif}.score small{font:12px ui-monospace,monospace;color:var(--mut);display:block;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.kv{margin-top:14px;font:12px/1.8 ui-monospace,monospace;color:var(--mut)}.kv b{color:var(--ink);font-weight:500}
+.strip{margin:36px 0 6px}svg{width:100%;height:auto;display:block}svg text{fill:var(--mut);font:10px ui-monospace,monospace}
+.cap{color:var(--mut);font-size:12px;margin:0 0 4px}
+h2{font:600 11px/1 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);margin:44px 0 14px}
+.heat{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.heat img{width:100%;display:block;background:#fff}.heat .p{margin-top:8px;image-rendering:pixelated;border:1px solid var(--line)}
+.heat .p img{background:none}
+.warn{color:var(--mid);font-size:13px;margin:14px 0 0}
+.limits{columns:2;column-gap:34px;color:var(--mut);font-size:13px;max-width:980px;padding-left:18px}.limits li{margin-bottom:8px;break-inside:avoid}
+.limits b{color:var(--ink);font-weight:500}
+input[type=file]{display:none}
+@media(max-width:820px){.slots,.heat,.vrow{grid-template-columns:1fr}.limits{columns:1}.slot{min-height:300px}}
+</style></head><body><main>
+<header><h1>Handwriting verification &middot; page level</h1><span id="mi" class="mono">loading model...</span></header>
+
+<p class="lead">Is this page written by the <em>same hand</em> as the reference?</p>
+<p class="sub">Drop a page of known handwriting on the left and the page in question on the right. The model compares the writing style across the whole page, not the words, and says whether the two are consistent.</p>
+
+<div class="slots">
+ <div class="slot" id="s-ref" data-kind="ref"><label class="tag">A &middot; Reference (known writer)</label><div class="empty"><b>Drop reference page</b>or click to browse. You can add up to 5 pages of the same writer.</div></div>
+ <div class="slot" id="s-q" data-kind="q"><label class="tag">B &middot; Questioned page</label><div class="empty"><b>Drop questioned page</b>or click to browse.</div></div>
+</div>
+<input type="file" id="f-ref" accept="image/*" multiple><input type="file" id="f-q" accept="image/*">
+<div class="samples" id="samples"></div>
+<div id="status" class="mono"></div>
+
+<section class="result" id="res">
+ <div class="vrow">
+  <div><div id="vw" class="verdict"></div><p class="vline" id="vl"></p><p class="warn" id="warn"></p></div>
+  <div><div class="score"><small>Similarity (cosine)</small><span id="sc"></span></div><div class="kv" id="kv"></div></div>
+ </div>
+ <div class="strip"><p class="cap">Where this score falls among validation pairs: different writers (red), same writer (green).</p><svg id="dist" viewBox="0 0 1000 200"></svg></div>
+ <h2>Where the model looked</h2>
+ <div class="heat">
+  <div><img id="h-ref" alt=""><div class="p"><img id="p-ref" alt=""></div><p class="cap" style="margin-top:6px">Reference. Lavender = attention weight. Strip = the 6 most attended patches.</p></div>
+  <div><img id="h-q" alt=""><div class="p"><img id="p-q" alt=""></div><p class="cap" style="margin-top:6px">Questioned page.</p></div>
+ </div>
+ <h2>Read this before you quote a result</h2>
+ <ul class="limits">
+  <li><b>It scores style similarity, not forgery directly.</b> The model learned from pages written by other people. It has not been trained or tested on skilled imitations of one specific person.</li>
+  <li><b>"Likely forged" means "very unlike this writer".</b> The thresholds were fitted on validation pages: accept above the 99th percentile of different-writer scores, reject below the 1st percentile of same-writer scores. Everything between is inconclusive.</li>
+  <li><b>Samples are validation pages</b> from IAM and CVL, which also set the thresholds, so they look better than unseen data would. The held-out test and Firemaker results are reported separately in the paper.</li>
+  <li><b>Phone photos and other paper or pens</b> differ from the training scans. Use flat, well lit, full-page images with only handwriting in view (no printed form text).</li>
+ </ul>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const S={ref:[],q:null};let info=null,timer=null,seq=0;
+const VERD={consistent:['Consistent','The questioned page is as similar to the reference as typical pages by the same writer. Treat as written by the same hand.'],
+ inconclusive:['Inconclusive','The score falls in the overlap between same-writer and different-writer pages. The model will not decide. A human examiner is needed.'],
+ likely_forged:['Likely forged','The questioned page is far less similar to the reference than typical pages by the same writer. Likely a different hand or a deliberate disguise.'],
+ uncalibrated:['No calibration','Run the calibration step first.']};
+function render(){
+ for(const k of ['ref','q']){
+  const el=$('s-'+k), files=k==='ref'?S.ref:(S.q?[S.q]:[]); const tag=el.querySelector('label').outerHTML;
+  if(!files.length){el.className='slot';el.innerHTML=tag+`<div class="empty"><b>${k==='ref'?'Drop reference page':'Drop questioned page'}</b>${k==='ref'?'or click to browse. You can add up to 5 pages of the same writer.':'or click to browse.'}</div>`;continue}
+  el.className='slot has';
+  el.innerHTML=tag+`<div class="thumbs ${files.length>1?'multi':''}">${files.map((f,i)=>`<figure><img src="${f.url}" alt=""><button data-k="${k}" data-i="${i}" title="Remove">&times;</button></figure>`).join('')}</div><div class="slotbar"><span>${files.map(f=>f.name).join(', ').slice(0,70)}</span>${k==='ref'&&files.length<5?'<button data-add="1">+ add another reference</button>':'<button data-rep="'+k+'">replace</button>'}</div>`;
+ }}
+function setFiles(k,fl){fl=[...fl].filter(f=>f.type.startsWith('image/')||/\.(jpe?g|png|bmp|tiff?|webp)$/i.test(f.name));if(!fl.length)return;
+ const mk=f=>({file:f,name:f.name,url:URL.createObjectURL(f)});
+ if(k==='ref')S.ref=[...S.ref,...fl.map(mk)].slice(0,5);else S.q=mk(fl[0]);render();schedule()}
+function schedule(){clearTimeout(timer);if(S.ref.length&&S.q)timer=setTimeout(run,350)}
+async function run(){
+ const my=++seq,st=$('status');st.className='mono';
+ const stages=['normalising pages...','sampling 64 ink patches per page...','embedding with the ResNet-18 encoder...','comparing with the reference...'];let i=0;st.textContent=stages[0];
+ const iv=setInterval(()=>{i=Math.min(i+1,stages.length-1);st.textContent=stages[i]},500);
+ const fd=new FormData();S.ref.forEach(r=>fd.append('reference',r.file));fd.append('questioned',S.q.file);
+ try{const r=await fetch('/api/verify',{method:'POST',body:fd});const d=await r.json();clearInterval(iv);if(my!==seq)return;
+  if(!r.ok){st.className='mono err';st.textContent=d.error||d.detail||'Request failed.';$('res').style.display='none';return}
+  st.textContent=`done in ${(d.ms/1000).toFixed(1)} s`;show(d)}
+ catch(e){clearInterval(iv);st.className='mono err';st.textContent='Could not reach the service: '+e.message}}
+function show(d){
+ $('res').style.display='block';const v=VERD[d.verdict]||VERD.uncalibrated;
+ const w=$('vw');w.textContent=v[0];w.className='verdict '+d.verdict;$('vl').textContent=v[1];
+ $('sc').textContent=d.score.toFixed(3);
+ let kv=`reference pages <b>${d.n_refs}</b>`;if(d.tau_low!=null)kv+=`<br>reject at or below <b>${d.tau_low.toFixed(3)}</b> &middot; accept at or above <b>${d.tau_high.toFixed(3)}</b>`;
+ if(d.genuine_below!=null)kv+=`<br><b>${(d.genuine_below*100).toFixed(0)}%</b> of same-writer pairs scored lower<br><b>${(d.impostor_above*100).toFixed(1)}%</b> of different-writer pairs scored higher`;
+ if(d.n_refs>1)kv+=`<br>per reference: ${d.per_reference.map(x=>'<b>'+x.toFixed(3)+'</b>').join(' ')}`;
+ $('kv').innerHTML=kv;$('warn').innerHTML=d.warnings.join('<br>');
+ $('h-ref').src=d.ref_heat;$('p-ref').src=d.ref_patches;$('h-q').src=d.q_heat;$('p-q').src=d.q_patches;
+ dist(d);$('res').scrollIntoView({behavior:'smooth',block:'nearest'})}
+function dist(d){const c=info&&info.calibration;if(!c||!c.bins){$('dist').innerHTML='';return}
+ const W=1000,H=200,L=10,R=10,T=20,B=34,lo=c.bins[0],hi=c.bins[c.bins.length-1],X=v=>L+(v-lo)/(hi-lo)*(W-L-R);
+ const norm=a=>{const s=a.reduce((x,y)=>x+y,0);return a.map(x=>x/s)},g=norm(c.genuine),im=norm(c.impostor),m=Math.max(...g,...im),Y=v=>H-B-v/m*(H-B-T);
+ const area=(a,col)=>{let p=`M${X(c.bins[0])} ${H-B}`;a.forEach((v,i)=>{p+=`L${X(c.bins[i])} ${Y(v)}L${X(c.bins[i+1])} ${Y(v)}`});return `<path d="${p}L${X(hi)} ${H-B}Z" fill="${col}" fill-opacity=".45" stroke="${col}"/>`};
+ let o=`<line x1="${L}" x2="${W-R}" y1="${H-B}" y2="${H-B}" stroke="#3a3450"/>`;
+ for(let t=-0.4;t<=1.0001;t+=0.2)o+=`<text x="${X(t)}" y="${H-B+16}" text-anchor="middle">${t.toFixed(1)}</text>`;
+ o+=area(im,'#ff5d6c')+area(g,'#5BF8B1');
+ for(const [t,l] of [[c.tau_low,'reject'],[c.tau_high,'accept']])o+=`<line x1="${X(t)}" x2="${X(t)}" y1="${T-6}" y2="${H-B}" stroke="#f1eefc" stroke-dasharray="4 4" opacity=".6"/><text x="${X(t)}" y="${T-9}" text-anchor="middle">${l} ${t.toFixed(2)}</text>`;
+ const s=Math.max(lo,Math.min(hi,d.score));o+=`<line x1="${X(s)}" x2="${X(s)}" y1="${T}" y2="${H-B}" stroke="#AD96F1" stroke-width="3"/><path d="M${X(s)-7} ${H-B+4}L${X(s)+7} ${H-B+4}L${X(s)} ${H-B-6}Z" fill="#AD96F1"/><text x="${X(s)+(s>hi-0.2?-8:8)}" y="${T+10}" text-anchor="${s>hi-0.2?'end':'start'}" style="fill:#AD96F1;font-size:12px">this pair ${d.score.toFixed(3)}</text>`;
+ $('dist').innerHTML=o}
+function wire(k){const el=$('s-'+k),inp=$('f-'+k);
+ el.addEventListener('click',e=>{if(e.target.closest('button'))return;if(!el.classList.contains('has'))inp.click()});
+ el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('drag')});
+ el.addEventListener('dragleave',()=>el.classList.remove('drag'));
+ el.addEventListener('drop',e=>{e.preventDefault();el.classList.remove('drag');setFiles(k,e.dataTransfer.files)});
+ inp.addEventListener('change',()=>{setFiles(k,inp.files);inp.value=''});
+ el.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.add||b.dataset.rep)inp.click();
+  else if(b.dataset.k==='ref'){S.ref.splice(+b.dataset.i,1);render();schedule()}else{S.q=null;render();$('res').style.display='none'}})}
+wire('ref');wire('q');
+async function loadSample(s){const g=async n=>{const b=await (await fetch('/samples/'+n)).blob();return new File([b],n,{type:'image/jpeg'})};
+ S.ref=[];S.q=null;setFiles('ref',[await g(s.reference)]);setFiles('q',[await g(s.questioned)])}
+fetch('/api/info').then(r=>r.json()).then(i=>{info=i;const c=i.calibration||{},p=c.per_dataset||{};
+ $('mi').textContent=`model ${i.model} · val EER ${p.iam?(p.iam.eer*100).toFixed(1):'-'}% IAM, ${p.cvl?(p.cvl.eer*100).toFixed(1):'-'}% CVL · CPU`;
+ if(i.samples.length){$('samples').innerHTML='<span>Try a validation sample:</span>'+i.samples.map(s=>`<button class="btn" data-id="${s.id}">${s.dataset.toUpperCase()} · ${s.truth}</button>`).join('');
+  $('samples').onclick=e=>{const b=e.target.closest('button');if(b)loadSample(i.samples.find(s=>s.id===b.dataset.id))}}})
+ .catch(()=>{$('mi').textContent='service not reachable'});
+</script></body></html>
