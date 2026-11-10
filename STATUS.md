@@ -1,5 +1,8 @@
 # STATUS
 
+## 2026-11-10 IST - Model published to Hugging Face; demo downloads it and picks GPU/CPU
+- Public model repo `lebiraja/handwriting-forgery-pageencoder` (`best.pt`, `config.yaml`, `best_val.json`, anonymous model card). `demo/app/engine.py` now fetches it via `huggingface_hub` when no local `MODEL_DIR` exists and uses CUDA if available, else CPU (`DEMO_DEVICE=auto|cpu|cuda`). New `demo/Dockerfile`, `demo/docker-compose.gpu.yml`; HF cache in `demo/.hf_cache`. Verified: health OK, `/api/verify` on a same-writer CVL pair gives 0.976 consistent on cuda; forced cpu loads and runs.
+
 ## 2026-11-06 14:30 IST - Paper lengthened to 10 / 18 pages
 - Added `paper/sections/appendix.tex` (implementation details, full multi-reference tables, per-seed calibration, ablation and demo figures, responsible use, reproducibility) and generated tables `tab_multiref_full`, `tab_multiref_n5`, `tab_calib` in `report.py`. `main.tex` (two columns) is now 10 pages; new `main_manuscript.tex` (IEEEtran journal, single column 12 pt) is 18 pages. No result changed; all added content comes from existing files.
 

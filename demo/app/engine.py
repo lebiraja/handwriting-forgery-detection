@@ -28,11 +28,25 @@ class PageError(ValueError):
     """A problem with an uploaded page that the user can fix."""
 
 
+HF_REPO = os.environ.get("HF_REPO", "lebiraja/handwriting-forgery-pageencoder")
+# DEMO_DEVICE: "auto" (default: GPU if torch sees one, else CPU), "cpu" or "cuda"
+DEVICE = torch.device("cuda" if os.environ.get("DEMO_DEVICE", "auto") != "cpu" and torch.cuda.is_available() else "cpu")
+
+
+def _model_files() -> Path:
+    """Local MODEL_DIR if it holds the weights, otherwise download them from the public HF repo (cached)."""
+    if (MODEL_DIR / "best.pt").exists() and (MODEL_DIR / "config.yaml").exists():
+        return MODEL_DIR
+    from huggingface_hub import snapshot_download
+    return Path(snapshot_download(HF_REPO, allow_patterns=["best.pt", "config.yaml"]))
+
+
 def load_model() -> PageEncoder:
-    cfg = yaml.safe_load(open(MODEL_DIR / "config.yaml"))
+    d = _model_files()
+    cfg = yaml.safe_load(open(d / "config.yaml"))
     m = PageEncoder(cfg["embed_dim"], pool=cfg["pool"])
-    m.load_state_dict(torch.load(MODEL_DIR / "best.pt", map_location="cpu"))
-    return m.eval()
+    m.load_state_dict(torch.load(d / "best.pt", map_location="cpu"))
+    return m.to(DEVICE).eval()
 
 
 def preprocess(raw: bytes, label: str) -> tuple[np.ndarray, list[str]]:
@@ -68,10 +82,10 @@ def _embed(model, gray: np.ndarray, label: str):
     except ValueError as e:
         raise PageError(f"{label}: {e}.")
     patches = np.stack([gray[y:y + S, x:x + S] for y, x in zip(ys, xs)])
-    x = torch.from_numpy((1.0 - patches.astype(np.float32) / 255.0)[:, None])[None]
+    x = torch.from_numpy((1.0 - patches.astype(np.float32) / 255.0)[:, None])[None].to(DEVICE)
     with torch.no_grad():
         e, _, a = model(x, return_all=True)
-    return e[0].numpy(), a[0].numpy(), ys, xs, patches
+    return e[0].cpu().numpy(), a[0].cpu().numpy(), ys, xs, patches
 
 
 def _b64(img: np.ndarray, ext=".jpg", q=82) -> str:
@@ -103,7 +117,7 @@ class Engine:
         self.calib = json.load(open(CALIB)) if CALIB.exists() else None
         self.model_name = MODEL_DIR.name if MODEL_DIR.name != "model" else "main_s0"
         with _lock:  # warm-up so the first request is fast
-            self.model(torch.zeros(1, K, 1, S, S))
+            self.model(torch.zeros(1, K, 1, S, S, device=DEVICE))
 
     def _calibrated(self, score: float) -> dict:
         c = self.calib

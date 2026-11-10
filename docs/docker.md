@@ -72,9 +72,10 @@ Compose note: with `--set seed=1` and `--resume` already in `run_train.sh`, re-r
 - `--resume` is always on in `run_train.sh`; use a new `<run_name>` for a new run.
 
 ## Demo service (`demo/docker-compose.yml`)
-Same image `handwriting-train:0.1` (already contains fastapi, uvicorn, python-multipart). CPU only (`CUDA_VISIBLE_DEVICES=""`, `cpus: 3`), port `127.0.0.1:8010`, healthcheck on `/api/health`. Mounts: `../train/src` (ro), `../train/runs/main_s0` (ro, model), `../datasets` (ro, calibration only), `./app` (rw: `calibration.json`, `samples/`).
+Built from `demo/Dockerfile` (`handwriting-train:0.1` + pinned `huggingface_hub`). The model is **downloaded from the public HF repo `lebiraja/handwriting-forgery-pageencoder`** (`HF_REPO`) on first start and cached in `demo/.hf_cache` (git-ignored); a local `MODEL_DIR` with `best.pt` + `config.yaml` takes precedence. Device: `DEMO_DEVICE=auto` (default) uses CUDA if torch sees a GPU, else CPU; `DEMO_DEVICE=cpu` forces CPU. GPU in Docker: add `-f docker-compose.gpu.yml`. `cpus: 3`, port `127.0.0.1:8010`, healthcheck on `/api/health`. Mounts: `../train/src` (ro), `../datasets` (ro, calibration only), `./app` (rw), `./.hf_cache`.
 ```
-cd demo && docker compose up -d                              # http://localhost:8010
+cd demo && docker compose up -d --build                      # http://localhost:8010 (auto GPU/CPU)
+DEMO_DEVICE=cpu docker compose up -d                          # force CPU
 docker compose run --rm demo python -m demo.calibrate         # refit thresholds on VALIDATION pages, rewrite samples
 ```
 API: `GET /api/info`, `GET /api/health`, `POST /api/verify` (multipart `reference` x1-5, `questioned`). Live training dashboard: `python3 train/dashboard/serve.py` -> http://localhost:8765.

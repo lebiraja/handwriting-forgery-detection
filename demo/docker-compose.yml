@@ -1,8 +1,11 @@
 # Demo service: upload a reference page and a questioned page, get a verdict. CPU only so it never competes
-# with the GPU training queue.   docker compose up -d   ->   http://localhost:8010
+# with the GPU training queue.   docker compose up -d --build   ->   http://localhost:8010
+# Weights are downloaded from the public HF repo on first start (cached in a volume). Device: GPU if available, else CPU.
+# GPU:  docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
 services:
   demo:
-    image: handwriting-train:0.1
+    build: .
+    image: handwriting-demo:0.1
     command: uvicorn demo.main:app --host 0.0.0.0 --port 8000
     user: "1000:1000"
     working_dir: /app
@@ -10,14 +13,16 @@ services:
     environment:
       HOME: /tmp
       PYTHONPATH: /app
-      CUDA_VISIBLE_DEVICES: ""
+      DEMO_DEVICE: ${DEMO_DEVICE:-auto}
+      HF_REPO: lebiraja/handwriting-forgery-pageencoder
+      HF_HOME: /hf
       MODEL_DIR: /model
       DEMO_THREADS: "3"
     ports:
       - "127.0.0.1:8010:8000"
     volumes:
       - ../train/src:/app/src:ro
-      - ../train/runs/main_s0:/model:ro
+      - ./.hf_cache:/hf
       - ../datasets:/data:ro
       - ./app:/app/demo
     healthcheck:
@@ -27,3 +32,4 @@ services:
       retries: 3
       start_period: 20s
     restart: unless-stopped
+

@@ -1,0 +1,10 @@
+# Optional override: give the demo the GPU (needs nvidia-container-toolkit). Without it the demo runs on CPU.
+services:
+  demo:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

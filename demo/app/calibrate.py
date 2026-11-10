@@ -13,7 +13,7 @@ import torch
 from sklearn.metrics import roc_curve
 
 from src.data import page_patches
-from .engine import CALIB, K, S, load_model
+from .engine import CALIB, DEVICE, K, S, load_model
 
 HERE = Path(__file__).parent
 MANIFEST = "/data/cache/manifests/master.csv"
@@ -27,8 +27,8 @@ def main():
     emb = []
     with torch.no_grad():
         for i, r in m.iterrows():
-            x = torch.from_numpy(page_patches(r.path, r["view"], K, S, False))[None]
-            emb.append(model(x)[0].numpy())
+            x = torch.from_numpy(page_patches(r.path, r["view"], K, S, False))[None].to(DEVICE)
+            emb.append(model(x)[0].cpu().numpy())
             if i % 50 == 0:
                 print(i, len(m), flush=True)
     emb = np.stack(emb)
